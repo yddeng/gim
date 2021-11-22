@@ -54,3 +54,12 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 
 	u.Reply(msg.GetSeq(), &protocol.UserLoginResp{Ok: true})
 }
+
+func OnClose(session dnet.Session, err error) {
+	fmt.Println("onClose", err)
+	ctx := session.Context()
+	if ctx != nil {
+		u := ctx.(*User)
+		delete(users, u.ID)
+	}
+}

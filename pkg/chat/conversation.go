@@ -23,12 +23,14 @@ const (
 )
 
 type Conversation struct {
-	Type     ConversationType // 对话类型
-	ID       uint64           // 全局唯一ID
-	Creator  string           // 对话创建者
-	CreateAt int64            // 创建时间戳 秒
-	Members  []string         // 成员列表
-	Name     string           // 会话名
+	Type          ConversationType // 对话类型
+	ID            uint64           // 全局唯一ID
+	Creator       string           // 对话创建者
+	CreateAt      int64            // 创建时间戳 秒
+	Members       []string         // 成员列表
+	Name          string           // 会话名
+	LastMessageAt *MessageEntity   // 最后一条消息
+	Message       []*MessageEntity
 }
 
 func onCreateConversation(u *user.User, message *codec.Message) {
@@ -74,7 +76,7 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 	}
 	for _, uid := range c.Members {
 		if uid != u.ID {
-			u := getUser(uid)
+			u := user.GetUserByID(uid)
 			if u != nil {
 				u.Reply(0, notify)
 			}
@@ -83,6 +85,63 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 
 }
 
+func onSendMessage(u *user.User, message *codec.Message) {
+	req := message.GetData().(*protocol.SendMessageReq)
+
+	c := convsations[req.GetConvID()]
+	if c == nil {
+		u.Reply(message.GetSeq(), &protocol.SendMessageResp{Ok: false})
+		return
+	}
+
+	exist := false
+	for _, id := range c.Members {
+		if id == u.ID {
+			exist = true
+		}
+	}
+
+	if !exist {
+		u.Reply(message.GetSeq(), &protocol.SendMessageResp{Ok: false})
+		return
+	}
+
+	messageID := uint64(1)
+	if c.LastMessageAt != nil {
+		messageID = c.LastMessageAt.MessageID + 1
+	}
+
+	m := &MessageEntity{
+		MessageID:      messageID,
+		UserID:         u.ID,
+		ConversationID: c.ID,
+		Message:        req.GetMsg(),
+		CreateAt:       time.Now().Unix(),
+	}
+
+	c.LastMessageAt = m
+	c.Message = append(c.Message, m)
+
+	conv := &protocol.Conversation{
+		ID:   c.ID,
+		Name: c.Name,
+	}
+	notifyMessage := &protocol.NotifyMessage{
+		Conv:     conv,
+		Msg:      req.GetMsg(),
+		UserID:   u.ID,
+		CreateAt: m.CreateAt,
+	}
+
+	for _, id := range c.Members {
+		if u2 := user.GetUserByID(id); u2 != nil {
+			u2.Reply(0, notifyMessage)
+		}
+	}
+
+}
+
 func init() {
 	gate.RegisterHandler(&protocol.CreateConversationReq{}, onCreateConversation)
+	gate.RegisterHandler(&protocol.SendMessageReq{}, onSendMessage)
 }

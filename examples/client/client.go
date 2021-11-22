@@ -16,7 +16,10 @@ func dispatchMessage(sess dnet.Session, msg *codec.Message) {
 	switch msg.GetData().(type) {
 	case *protocol.UserLoginResp:
 		createConversation(sess)
-	case *protocol.CreateConversationResp:
+	default:
+
+		go sendMessage(sess)
+
 	}
 }
 
@@ -58,5 +61,17 @@ func login(session dnet.Session) {
 func createConversation(session dnet.Session) {
 	session.Send(codec.NewMessage(1, &protocol.CreateConversationReq{
 		Members: []string{"111"},
+	}))
+}
+
+func sendMessage(session dnet.Session) {
+	fmt.Printf("输入：")
+	var id string
+	fmt.Scan(&id)
+	session.Send(codec.NewMessage(1, &protocol.SendMessageReq{
+		ConvID: 2,
+		Msg: &protocol.Message{
+			Text: id,
+		},
 	}))
 }

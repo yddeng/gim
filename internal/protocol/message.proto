@@ -37,7 +37,8 @@ message Message{
 }
 
 message SendMessageReq{
-    Message msg = 1;
+    uint64  convID = 1;
+    Message msg    = 2;
 }
 
 message SendMessageResp{
@@ -45,6 +46,8 @@ message SendMessageResp{
 }
 
 message NotifyMessage{
-    Conversation conv   = 1;
-    Message      msg    = 2;
+    Conversation conv     = 1;
+    Message      msg      = 2;
+    string       userID   = 3;
+    int64        createAt = 4;
 }

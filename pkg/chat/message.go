@@ -1,12 +1,11 @@
 package gim
 
-// 消息队列
-type MessageQueue struct {
-	ID      uint64 // 全局唯一ID
-	Counter uint64 // 消息计数器
-}
+import "github.com/yddeng/gim/internal/protocol"
 
 type MessageEntity struct {
-	MID  uint64 // 消息ID
-	Text string // 消息
+	MessageID      uint64 // 消息ID
+	UserID         string // 用户ID
+	ConversationID uint64 // 对话ID
+	Message        *protocol.Message
+	CreateAt       int64 // 时间
 }

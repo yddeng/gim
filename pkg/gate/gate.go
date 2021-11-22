@@ -9,7 +9,6 @@ import (
 	"github.com/yddeng/gim/internal/codec/pb"
 	"github.com/yddeng/gim/pkg/user"
 	"net"
-	"time"
 )
 
 var (
@@ -37,7 +36,7 @@ func StartTCPGateway(address string) error {
 		fmt.Println("new client", conn.RemoteAddr().String())
 
 		_ = dnet.NewTCPSession(conn,
-			dnet.WithTimeout(time.Second*5, 0), // 超时
+			//dnet.WithTimeout(time.Second*5, 0), // 超时
 			dnet.WithCodec(codec.NewCodec("im")),
 			dnet.WithErrorCallback(func(session dnet.Session, err error) {
 				fmt.Println("onError", err)
@@ -58,7 +57,7 @@ func StartTCPGateway(address string) error {
 
 			}),
 			dnet.WithCloseCallback(func(session dnet.Session, reason error) {
-				fmt.Println("onClose", reason)
+				user.OnClose(session, reason)
 			}))
 	})
 }
