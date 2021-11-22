@@ -16,6 +16,10 @@ type User struct {
 	sess dnet.Session
 }
 
-func (this *User) Reply(msg proto.Message) {
-	codec.NewMessage()
+func (this *User) Reply(seq uint32, msg proto.Message) {
+	this.sess.Send(codec.NewMessage(seq, msg))
+}
+
+func getUser(id string) *User {
+	return users[id]
 }

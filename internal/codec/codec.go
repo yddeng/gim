@@ -83,6 +83,7 @@ func (decoder *Codec) unPack() (interface{}, error) {
 	msg := &Message{
 		data: m.(proto.Message),
 		cmd:  decoder.cmd,
+		seq:  decoder.seqNo,
 	}
 
 	decoder.readHead = false

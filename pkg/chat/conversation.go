@@ -43,10 +43,45 @@ func onCreateConversation(session dnet.Session, message *codec.Message) {
 	}
 	convID++
 
+	exist := false
+	for _, uid := range c.Members {
+		if uid == user.ID {
+			exist = true
+			break
+		}
+	}
+
+	if !exist {
+		c.Members = append(c.Members, user.ID)
+	}
+
 	convsations[c.ID] = c
+
+	conv := &protocol.Conversation{
+		ID:   c.ID,
+		Name: c.Name,
+	}
+
+	user.Reply(message.GetSeq(), &protocol.CreateConversationResp{
+		Ok:   true,
+		Conv: conv,
+	})
+
+	notify := &protocol.NotifyInvited{
+		Conv:   conv,
+		InitBy: user.ID,
+	}
+	for _, uid := range c.Members {
+		if uid != user.ID {
+			u := getUser(uid)
+			if u != nil {
+				u.Reply(0, notify)
+			}
+		}
+	}
 
 }
 
 func init() {
-	gate.RegisterHandler(&protocol.CreateConversation{}, onCreateConversation)
+	gate.RegisterHandler(&protocol.CreateConversationReq{}, onCreateConversation)
 }

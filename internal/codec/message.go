@@ -19,3 +19,7 @@ func (this *Message) GetData() interface{} {
 func (this *Message) GetCmd() uint16 {
 	return this.cmd
 }
+
+func (this *Message) GetSeq() uint32 {
+	return this.seq
+}

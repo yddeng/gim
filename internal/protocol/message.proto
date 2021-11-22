@@ -2,7 +2,8 @@ syntax = "proto3";
 option go_package = "protocol";
 
 message Conversation{
-    string name = 1;
+    uint64 ID   = 1;
+    string Name = 2;
 }
 
 // 创建对话

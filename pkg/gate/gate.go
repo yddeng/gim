@@ -33,7 +33,7 @@ func StartTCPGateway(address string) error {
 		fmt.Println("new client", conn.RemoteAddr().String())
 		_ = dnet.NewTCPSession(conn,
 			dnet.WithTimeout(time.Second*5, 0), // 超时
-			dnet.WithCodec(codec.NewCodec("im", "", "")),
+			dnet.WithCodec(codec.NewCodec("im")),
 			dnet.WithErrorCallback(func(session dnet.Session, err error) {
 				fmt.Println("onError", err)
 			}),
