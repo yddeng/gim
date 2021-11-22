@@ -1,10 +1,10 @@
 package gim
 
 import (
-	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol"
 	"github.com/yddeng/gim/pkg/gate"
+	"github.com/yddeng/gim/pkg/user"
 	"time"
 )
 
@@ -30,13 +30,12 @@ type Conversation struct {
 	Name     string           // 会话名
 }
 
-func onCreateConversation(session dnet.Session, message *codec.Message) {
-	user := sess2User[session]
+func onCreateConversation(u *user.User, message *codec.Message) {
 	req := message.GetData().(*protocol.CreateConversationReq)
 
 	c := &Conversation{
 		ID:       convID,
-		Creator:  user.ID,
+		Creator:  u.ID,
 		CreateAt: time.Now().Unix(),
 		Members:  req.GetMembers(),
 		Name:     req.GetName(),
@@ -45,14 +44,14 @@ func onCreateConversation(session dnet.Session, message *codec.Message) {
 
 	exist := false
 	for _, uid := range c.Members {
-		if uid == user.ID {
+		if uid == u.ID {
 			exist = true
 			break
 		}
 	}
 
 	if !exist {
-		c.Members = append(c.Members, user.ID)
+		c.Members = append(c.Members, u.ID)
 	}
 
 	convsations[c.ID] = c
@@ -62,17 +61,17 @@ func onCreateConversation(session dnet.Session, message *codec.Message) {
 		Name: c.Name,
 	}
 
-	user.Reply(message.GetSeq(), &protocol.CreateConversationResp{
+	u.Reply(message.GetSeq(), &protocol.CreateConversationResp{
 		Ok:   true,
 		Conv: conv,
 	})
 
 	notify := &protocol.NotifyInvited{
 		Conv:   conv,
-		InitBy: user.ID,
+		InitBy: u.ID,
 	}
 	for _, uid := range c.Members {
-		if uid != user.ID {
+		if uid != u.ID {
 			u := getUser(uid)
 			if u != nil {
 				u.Reply(0, notify)

@@ -1,6 +1,14 @@
 syntax = "proto3";
 option go_package = "protocol";
 
+message UserLoginReq{
+    string ID = 1;
+}
+
+message UserLoginResp{
+    bool ok = 1;
+}
+
 message Conversation{
     uint64 ID   = 1;
     string Name = 2;

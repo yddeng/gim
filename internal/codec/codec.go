@@ -3,7 +3,6 @@ package codec
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/dnet/drpc"
 	"github.com/yddeng/gim/internal/codec/pb"
 	"github.com/yddeng/utils/buffer"
 	"io"
