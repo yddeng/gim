@@ -6,10 +6,20 @@ message Conversation{
 }
 
 // 创建对话
-message CreateConversation{
+message CreateConversationReq{
     repeated string members = 1; // 必要参数，包含对话的初始成员列表，请注意当前用户作为对话的创建者，是默认包含在成员里面的，所以 members 数组中可以不包含当前用户的 clientId。
     string name = 2; // 对话名字，可选参数
     bool unique = 3; // 唯一对话标志位，可选。如果设置为唯一对话，云端会根据完整的成员列表先进行一次查询，如果已经有正好包含这些成员的对话存在，那么就返回已经存在的对话，否则才创建一个新的对话。
+}
+
+message CreateConversationResp{
+    bool         ok     = 1;
+    Conversation conv   = 2;
+}
+
+message NotifyInvited{
+    Conversation conv   = 1;
+    string       initBy = 2; // 邀请方
 }
 
 // 发送消息
@@ -17,15 +27,14 @@ message Message{
     string text = 1; // 文本消息
 }
 
-// 通知消息
-
-// 收到邀请
-message NotifyInvited{
-    Conversation conv   = 1;
-    string       initBy = 2; // 邀请方
+message SendMessageReq{
+    Message msg = 1;
 }
 
-// 收到聊天信息
+message SendMessageResp{
+    bool  ok = 1;
+}
+
 message NotifyMessage{
     Conversation conv   = 1;
     Message      msg    = 2;
