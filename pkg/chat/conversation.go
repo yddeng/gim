@@ -1,6 +1,7 @@
 package gim
 
 import (
+	"fmt"
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol"
 	"github.com/yddeng/gim/pkg/gate"
@@ -32,6 +33,7 @@ type Conversation struct {
 
 func onCreateConversation(u *user.User, message *codec.Message) {
 	req := message.GetData().(*protocol.CreateConversationReq)
+	fmt.Printf("onCreateConversation %v\n", req)
 
 	c := &Conversation{
 		ID:       convID,

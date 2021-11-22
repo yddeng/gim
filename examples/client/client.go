@@ -4,8 +4,21 @@ import (
 	"fmt"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
-	"time"
+	"github.com/yddeng/gim/internal/protocol"
 )
+
+func initHandler() {
+
+}
+
+func dispatchMessage(sess dnet.Session, msg *codec.Message) {
+	fmt.Println(msg.GetData())
+	switch msg.GetData().(type) {
+	case *protocol.UserLoginResp:
+		createConversation(sess)
+	case *protocol.CreateConversationResp:
+	}
+}
 
 func main() {
 	address := "127.0.0.1:43210"
@@ -15,7 +28,6 @@ func main() {
 	}
 
 	sess := dnet.NewTCPSession(c,
-		dnet.WithTimeout(time.Second*5, 0), // 超时
 		dnet.WithCodec(codec.NewCodec("im")),
 		dnet.WithErrorCallback(func(session dnet.Session, err error) {
 			fmt.Println("onError", err)
@@ -29,4 +41,22 @@ func main() {
 		}),
 	)
 
+	login(sess)
+
+	select {}
+}
+
+func login(session dnet.Session) {
+	fmt.Printf("账号：")
+	var id string
+	fmt.Scan(&id)
+	session.Send(codec.NewMessage(1, &protocol.UserLoginReq{
+		ID: id,
+	}))
+}
+
+func createConversation(session dnet.Session) {
+	session.Send(codec.NewMessage(1, &protocol.CreateConversationReq{
+		Members: []string{"111"},
+	}))
 }

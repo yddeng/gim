@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
@@ -32,6 +33,7 @@ func (this *User) Reply(seq uint32, msg proto.Message) {
 }
 
 func OnUserLogin(sess dnet.Session, msg *codec.Message) {
+	fmt.Printf("onUserLogin %v\n", msg)
 	req := msg.GetData().(*protocol.UserLoginReq)
 
 	id := req.GetID()

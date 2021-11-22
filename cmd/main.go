@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "github.com/yddeng/gim/pkg/chat"
 	"github.com/yddeng/gim/pkg/gate"
 )
 
