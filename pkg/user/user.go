@@ -23,13 +23,46 @@ func GetUserByID(id string) *User {
 }
 
 type User struct {
-	ID       string
-	CreateAt int64
-	sess     dnet.Session
+	ID         string
+	CreateAt   int64
+	ConvStates map[uint64]*ConversationState
+	sess       dnet.Session
+}
+
+const (
+	stateWaitActive = iota
+	stateActive
+	stateNotify
+	stateRemove
+)
+
+type ConversationState struct {
+	ConversationID uint64
+	LastReadAt     uint64 // 最后阅读的消息ID
+	State          int    // 状态
 }
 
 func (this *User) Reply(seq uint32, msg proto.Message) {
 	this.sess.Send(codec.NewMessage(seq, msg))
+}
+
+func (this *User) Tick() {
+
+}
+
+func (this *User) OnNotifyInvited(notify *protocol.NotifyInvited) {
+	state := &ConversationState{
+		ConversationID: notify.GetConv().GetID(),
+		LastReadAt:     0,
+		State:          stateWaitActive,
+	}
+
+	this.ConvStates[state.ConversationID] = state
+	this.Reply(0, notify)
+}
+
+func (this *User) OnNotifyMessage(convID uint64) {
+
 }
 
 func OnUserLogin(sess dnet.Session, msg *codec.Message) {

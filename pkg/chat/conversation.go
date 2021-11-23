@@ -50,7 +50,12 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 	for _, uid := range c.Members {
 		if uid == u.ID {
 			exist = true
-			break
+		} else {
+			u2 := user.GetUserByID(uid)
+			if u2 == nil {
+				u.Reply(message.GetSeq(), &protocol.CreateConversationResp{Ok: false})
+				return
+			}
 		}
 	}
 
@@ -78,7 +83,7 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 		if uid != u.ID {
 			u := user.GetUserByID(uid)
 			if u != nil {
-				u.Reply(0, notify)
+				u.OnNotifyInvited(notify)
 			}
 		}
 	}
