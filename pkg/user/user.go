@@ -10,15 +10,10 @@ import (
 )
 
 var (
-	sess2User = map[dnet.Session]*User{}
-	users     = map[string]*User{}
+	users = map[string]*User{}
 )
 
-func GetUserBySession(sess dnet.Session) *User {
-	return sess2User[sess]
-}
-
-func GetUserByID(id string) *User {
+func GetUser(id string) *User {
 	return users[id]
 }
 
@@ -45,10 +40,6 @@ type ConversationState struct {
 
 func (this *User) Reply(seq uint32, msg proto.Message) {
 	this.sess.Send(codec.NewMessage(seq, msg))
-}
-
-func (this *User) Tick() {
-
 }
 
 func (this *User) OnNotifyInvited(notify *pb.NotifyInvited) {
