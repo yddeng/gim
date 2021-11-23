@@ -1,0 +1,11 @@
+syntax = "proto3";
+option go_package = "protocol";
+import "errcode.proto";
+
+message UserLoginReq{
+    string ID = 1;
+}
+
+message UserLoginResp{
+    ErrCode code = 1;
+}

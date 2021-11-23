@@ -1,0 +1,9 @@
+syntax = "proto3";
+option go_package = "protocol";
+
+enum ErrCode{
+    OK               = 0; // 请求成功
+    UserAlreadyLogin = 1; // 用户已经登陆
+    ConversationNotExist = 11; // 会话不存在
+    UserNotInConversation = 12; // 用户没有在会话中
+}

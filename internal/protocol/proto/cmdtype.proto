@@ -1,0 +1,16 @@
+syntax = "proto3";
+option go_package = "protocol";
+
+enum CmdType {
+    CmdNone = 0;
+    CmdUserLoginReq = 1;
+    CmdUserLoginResp = 2;
+
+    CmdCreateConversationReq  = 101;
+    CmdCreateConversationResp = 102;
+    CmdNotifyInvited = 103;
+
+    CmdSendMessageReq = 111;
+    CmdSendMessageResp = 112;
+    CmdNotifyMessage   = 113;
+}
