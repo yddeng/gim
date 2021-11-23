@@ -1,4 +1,4 @@
-package gim
+package conv
 
 import (
 	"github.com/yddeng/gim/internal/protocol/pb"
