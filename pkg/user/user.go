@@ -5,7 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/protocol"
+	"github.com/yddeng/gim/internal/protocol/pb"
 	"time"
 )
 
@@ -24,6 +24,7 @@ func GetUserByID(id string) *User {
 
 type User struct {
 	ID         string
+	Attrs      map[string]string
 	CreateAt   int64
 	ConvStates map[uint64]*ConversationState
 	sess       dnet.Session
@@ -50,7 +51,7 @@ func (this *User) Tick() {
 
 }
 
-func (this *User) OnNotifyInvited(notify *protocol.NotifyInvited) {
+func (this *User) OnNotifyInvited(notify *pb.NotifyInvited) {
 	state := &ConversationState{
 		ConversationID: notify.GetConv().GetID(),
 		LastReadAt:     0,
@@ -67,16 +68,16 @@ func (this *User) OnNotifyMessage(convID uint64) {
 
 func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 	fmt.Printf("onUserLogin %v\n", msg)
-	req := msg.GetData().(*protocol.UserLoginReq)
+	req := msg.GetData().(*pb.UserLoginReq)
 
 	id := req.GetID()
-	u := GetUserByID(id)
-	if u != nil {
-		sess.Send(codec.NewMessage(msg.GetSeq(), &protocol.UserLoginResp{Ok: false}))
+	ctx := sess.Context()
+	if ctx != nil {
+		sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_UserAlreadyLogin}))
 		return
 	}
 
-	u = &User{
+	u := &User{
 		ID:       id,
 		CreateAt: time.Now().Unix(),
 		sess:     sess,
@@ -85,7 +86,7 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 	users[id] = u
 	sess.SetContext(u)
 
-	u.Reply(msg.GetSeq(), &protocol.UserLoginResp{Ok: true})
+	u.Reply(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_OK})
 }
 
 func OnClose(session dnet.Session, err error) {

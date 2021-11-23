@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "protocol";
+option go_package = "pb";
 import "errcode.proto";
 
 message UserLoginReq{
@@ -8,4 +8,15 @@ message UserLoginReq{
 
 message UserLoginResp{
     ErrCode code = 1;
+}
+
+enum UserState{
+    OnLine  = 0;
+    OffLine = 1;
+}
+
+message User{
+    UserState state   = 1;
+    string    userID  = 2;
+    map<string,string> attr = 3;
 }

@@ -3,7 +3,7 @@ package gim
 import (
 	"fmt"
 	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/protocol"
+	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/gim/pkg/gate"
 	"github.com/yddeng/gim/pkg/user"
 	"time"
@@ -14,27 +14,19 @@ var (
 	convsations = map[uint64]*Conversation{}
 )
 
-type ConversationType int
-
-const (
-	ConversationType_Default   = iota // 普通对话
-	ConversationType_Transient        // 临时对话
-	ConversationType_System           // 系统对话
-)
-
 type Conversation struct {
-	Type          ConversationType // 对话类型
-	ID            uint64           // 全局唯一ID
-	Creator       string           // 对话创建者
-	CreateAt      int64            // 创建时间戳 秒
-	Members       []string         // 成员列表
-	Name          string           // 会话名
-	LastMessageAt *MessageEntity   // 最后一条消息
+	Type          pb.ConversationType // 对话类型
+	ID            uint64              // 全局唯一ID
+	Creator       string              // 对话创建者
+	CreateAt      int64               // 创建时间戳 秒
+	Members       []string            // 成员列表
+	Name          string              // 会话名
+	LastMessageAt *MessageEntity      // 最后一条消息
 	Message       []*MessageEntity
 }
 
 func onCreateConversation(u *user.User, message *codec.Message) {
-	req := message.GetData().(*protocol.CreateConversationReq)
+	req := message.GetData().(*pb.CreateConversationReq)
 	fmt.Printf("onCreateConversation %v\n", req)
 
 	c := &Conversation{
@@ -53,7 +45,7 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 		} else {
 			u2 := user.GetUserByID(uid)
 			if u2 == nil {
-				u.Reply(message.GetSeq(), &protocol.CreateConversationResp{Ok: false})
+				u.Reply(message.GetSeq(), &pb.CreateConversationResp{Code: pb.ErrCode_UserNotExist})
 				return
 			}
 		}
@@ -65,17 +57,17 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 
 	convsations[c.ID] = c
 
-	conv := &protocol.Conversation{
+	conv := &pb.Conversation{
 		ID:   c.ID,
 		Name: c.Name,
 	}
 
-	u.Reply(message.GetSeq(), &protocol.CreateConversationResp{
-		Ok:   true,
+	u.Reply(message.GetSeq(), &pb.CreateConversationResp{
+		Code: pb.ErrCode_OK,
 		Conv: conv,
 	})
 
-	notify := &protocol.NotifyInvited{
+	notify := &pb.NotifyInvited{
 		Conv:   conv,
 		InitBy: u.ID,
 	}
@@ -91,11 +83,11 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 }
 
 func onSendMessage(u *user.User, message *codec.Message) {
-	req := message.GetData().(*protocol.SendMessageReq)
+	req := message.GetData().(*pb.SendMessageReq)
 
 	c := convsations[req.GetConvID()]
 	if c == nil {
-		u.Reply(message.GetSeq(), &protocol.SendMessageResp{Ok: false})
+		u.Reply(message.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_ConversationNotExist})
 		return
 	}
 
@@ -107,7 +99,7 @@ func onSendMessage(u *user.User, message *codec.Message) {
 	}
 
 	if !exist {
-		u.Reply(message.GetSeq(), &protocol.SendMessageResp{Ok: false})
+		u.Reply(message.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInConversation})
 		return
 	}
 
@@ -127,15 +119,18 @@ func onSendMessage(u *user.User, message *codec.Message) {
 	c.LastMessageAt = m
 	c.Message = append(c.Message, m)
 
-	conv := &protocol.Conversation{
+	conv := &pb.Conversation{
 		ID:   c.ID,
 		Name: c.Name,
 	}
-	notifyMessage := &protocol.NotifyMessage{
-		Conv:     conv,
+	info := &pb.MessageInfo{
 		Msg:      req.GetMsg(),
 		UserID:   u.ID,
 		CreateAt: m.CreateAt,
+	}
+	notifyMessage := &pb.NotifyMessage{
+		Conv:     conv,
+		MsgInfos: []*pb.MessageInfo{info},
 	}
 
 	for _, id := range c.Members {
@@ -147,6 +142,6 @@ func onSendMessage(u *user.User, message *codec.Message) {
 }
 
 func init() {
-	gate.RegisterHandler(&protocol.CreateConversationReq{}, onCreateConversation)
-	gate.RegisterHandler(&protocol.SendMessageReq{}, onSendMessage)
+	gate.RegisterHandler(uint16(pb.CmdType_CmdCreateConversationReq), onCreateConversation)
+	gate.RegisterHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
 }

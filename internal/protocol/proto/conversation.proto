@@ -1,10 +1,20 @@
 syntax = "proto3";
-option go_package = "protocol";
+option go_package = "pb";
 import "errcode.proto";
+import "user.proto";
+
+enum ConversationType{
+    Normal    = 0; // 普通会话类型 单聊、群聊
+    Transient = 1; // 临时会话
+    ChatRoom  = 2; // 聊天室
+}
 
 message Conversation{
-    uint64 ID   = 1;
-    string Name = 2;
+    ConversationType type = 1;
+    uint64 ID   = 2;
+    string name = 3;
+    uint64 lastMessageID = 4; // 最后一条消息的ID
+    uint64 lastMessageAt = 5; // 最后一条消息的时间
 }
 
 // 创建对话
@@ -21,12 +31,18 @@ message CreateConversationResp{
 
 message NotifyInvited{
     Conversation conv   = 1;
-    string       initBy = 2; // 邀请方
+    string       initBy = 2; // 操作者
 }
 
-// 发送消息
+// 用户发送消息
 message Message{
     string text = 1; // 文本消息
+}
+
+message MessageInfo{
+    Message msg      = 1;
+    string  userID   = 2; // 发言的用户
+    int64   createAt = 3; // 创建时间戳秒
 }
 
 message SendMessageReq{
@@ -40,7 +56,70 @@ message SendMessageResp{
 
 message NotifyMessage{
     Conversation conv     = 1;
-    Message      msg      = 2;
-    string       userID   = 3;
-    int64        createAt = 4;
+    repeated MessageInfo  msgInfos  = 2;
 }
+
+message AddMemberReq{
+    uint64 convID = 1;
+    string userID = 2;
+}
+
+message AddMemberResp{
+    ErrCode code = 1;
+}
+
+message NotifyMemberJoined{
+    Conversation    conv     = 1;
+    repeated string joinIds  = 2; // 加入的用户
+    string          initBy   = 3; // 操作者
+}
+
+message RemoveMemberReq{
+    uint64 convID = 1;
+    string userID = 2;
+}
+
+message RemoveMemberResp{
+    ErrCode code = 1;
+}
+
+message NotifyMemberLeft{
+    Conversation    conv     = 1;
+    repeated string leftIds  = 2; // 离开的用户
+    string          kickedBy = 3; // 操作者
+}
+
+message NotifyKicked{
+    Conversation conv     = 1;
+    string       kickedBy = 2; // 操作者
+}
+
+message JoinReq{
+    uint64 convID = 1;
+}
+message JoinResp{
+    ErrCode code = 1;
+}
+
+// 主动
+message QuitReq{
+    uint64 convID = 1;
+}
+message QuitResp{
+    ErrCode code = 1;
+}
+
+// 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性
+message GetConversationUsersReq{
+    uint64 convID = 1;
+}
+message GetConversationUsersResp{
+    ErrCode code = 1;
+    repeated User users = 2;
+}
+
+
+//// 拉取列表
+//message GetConversationList{
+//
+//}

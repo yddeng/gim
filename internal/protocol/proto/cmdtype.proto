@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "protocol";
+option go_package = "pb";
 
 enum CmdType {
     CmdNone = 0;
@@ -8,9 +8,25 @@ enum CmdType {
 
     CmdCreateConversationReq  = 101;
     CmdCreateConversationResp = 102;
-    CmdNotifyInvited = 103;
 
-    CmdSendMessageReq = 111;
-    CmdSendMessageResp = 112;
-    CmdNotifyMessage   = 113;
+    CmdGetConversationUsersReq = 111;
+    CmdGetConversationUsersResp = 112;
+
+    CmdAddMemberReq = 201;
+    CmdAddMemberResp = 202;
+    CmdRemoveMemberReq = 203;
+    CmdRemoveMemberResp = 204;
+    CmdJoinReq = 211;
+    CmdJoinResp = 212;
+    CmdQuitReq = 213;
+    CmdQuitResp = 224;
+    CmdNotifyInvited = 231;
+    CmdNotifyMemberJoined = 232;
+    CmdNotifyKicked = 233;
+    CmdNotifyMemberLeft = 234;
+
+
+    CmdSendMessageReq = 301;
+    CmdSendMessageResp = 302;
+    CmdNotifyMessage   = 303;
 }

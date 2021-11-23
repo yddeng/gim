@@ -3,10 +3,8 @@ package gate
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/codec/pb"
 	"github.com/yddeng/gim/pkg/user"
 	"net"
 )
@@ -15,9 +13,7 @@ var (
 	msgHandler = map[uint16]func(*user.User, *codec.Message){}
 )
 
-func RegisterHandler(msg proto.Message, h func(*user.User, *codec.Message)) {
-	cmd := pb.GetIdByName("im", proto.MessageName(msg))
-
+func RegisterHandler(cmd uint16, h func(*user.User, *codec.Message)) {
 	if _, ok := msgHandler[cmd]; ok {
 		panic(fmt.Sprintf("cmd %d is alreadly register. ", cmd))
 	}
