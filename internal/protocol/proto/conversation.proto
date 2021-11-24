@@ -15,7 +15,7 @@ message Conversation{
     uint64 ID   = 2;
     string name = 3;
     uint64 lastMessageID = 4; // 最后一条消息的ID
-    uint64 lastMessageAt = 5; // 最后一条消息的时间
+    int64  lastMessageTimestamp = 5; // 最后一条消息的时间
 }
 
 // 创建对话
@@ -44,6 +44,7 @@ message MessageInfo{
     Message msg      = 1;
     string  userID   = 2; // 发言的用户
     int64   createAt = 3; // 创建时间戳秒
+    uint64  msgID    = 4;
 }
 
 message SendMessageReq{
@@ -53,6 +54,7 @@ message SendMessageReq{
 
 message SendMessageResp{
     ErrCode code = 1;
+    Conversation conv   = 2;
 }
 
 message NotifyMessage{
@@ -62,7 +64,7 @@ message NotifyMessage{
 
 message AddMemberReq{
     uint64 convID = 1;
-    string userID = 2;
+    repeated string addIds = 2;
 }
 
 message AddMemberResp{
@@ -77,7 +79,7 @@ message NotifyMemberJoined{
 
 message RemoveMemberReq{
     uint64 convID = 1;
-    string userID = 2;
+    repeated string removeIds = 2;
 }
 
 message RemoveMemberResp{
@@ -100,6 +102,7 @@ message JoinReq{
 }
 message JoinResp{
     ErrCode code = 1;
+    Conversation conv   = 2;
 }
 
 // 主动
@@ -108,6 +111,7 @@ message QuitReq{
 }
 message QuitResp{
     ErrCode code = 1;
+    Conversation conv   = 2;
 }
 
 // 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性

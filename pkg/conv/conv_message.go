@@ -1,69 +1,55 @@
 package conv
 
 import (
+	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/gim/pkg/gate"
 	"github.com/yddeng/gim/pkg/user"
+	"github.com/yddeng/utils/log"
 	"time"
 )
 
-func onSendMessage(u *user.User, message *codec.Message) {
-	req := message.GetData().(*pb.SendMessageReq)
+func onSendMessage(u *user.User, msg *codec.Message) {
+	req := msg.GetData().(*pb.SendMessageReq)
+	log.Debugf("onSendMessage %v", req)
 
-	c := convsations[req.GetConvID()]
+	c := GetConversation(req.GetConvID())
 	if c == nil {
-		u.Reply(message.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_ConversationNotExist})
+		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_ConversationNotExist})
 		return
 	}
 
-	exist := false
-	for _, id := range c.Members {
-		if id == u.ID {
-			exist = true
-		}
-	}
-
-	if !exist {
-		u.Reply(message.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInConversation})
+	if inConv := c.HasUser(u.ID); !inConv {
+		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInConversation})
 		return
 	}
 
-	messageID := uint64(1)
+	msgID := uint64(1)
 	if c.LastMessageAt != nil {
-		messageID = c.LastMessageAt.MessageID + 1
+		msgID = c.LastMessageAt.MessageInfo.GetMsgID() + 1
 	}
 
 	m := &MessageEntity{
-		MessageID:      messageID,
-		UserID:         u.ID,
+		MessageInfo: &pb.MessageInfo{
+			Msg:      req.GetMsg(),
+			UserID:   u.ID,
+			CreateAt: time.Now().Unix(),
+			MsgID:    msgID,
+		},
 		ConversationID: c.ID,
-		Message:        req.GetMsg(),
-		CreateAt:       time.Now().Unix(),
 	}
 
 	c.LastMessageAt = m
 	c.Message = append(c.Message, m)
 
-	conv := &pb.Conversation{
-		ID:   c.ID,
-		Name: c.Name,
-	}
-	info := &pb.MessageInfo{
-		Msg:      req.GetMsg(),
-		UserID:   u.ID,
-		CreateAt: m.CreateAt,
-	}
+	conv := c.Pack()
+	u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Conv: conv})
+
 	notifyMessage := &pb.NotifyMessage{
 		Conv:     conv,
-		MsgInfos: []*pb.MessageInfo{info},
+		MsgInfos: []*pb.MessageInfo{m.MessageInfo},
 	}
-
-	for _, id := range c.Members {
-		if u2 := user.GetUserByID(id); u2 != nil {
-			u2.Reply(0, notifyMessage)
-		}
-	}
-
+	c.Broadcast(notifyMessage)
 }
 
 func init() {

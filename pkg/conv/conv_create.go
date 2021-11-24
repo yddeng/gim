@@ -18,35 +18,25 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 		ID:       convID,
 		Creator:  u.ID,
 		CreateAt: nowUnix,
-		Members:  req.GetMembers(),
+		Members:  make([]string, 0, len(req.GetMembers())),
 		Name:     req.GetName(),
 	}
 	convID++
 
-	exist := false
-	for _, uid := range c.Members {
-		if uid == u.ID {
-			exist = true
-		} else {
-			u2 := user.GetUser(uid)
-			if u2 == nil {
-				u.SendToClient(message.GetSeq(), &pb.CreateConversationResp{Code: pb.ErrCode_UserNotExist})
-				return
+	c.Members = append(c.Members, u.ID)
+	for _, id := range req.GetMembers() {
+		// load 数据库
+		if u2 := user.GetUser(id); u2 != nil {
+			if u2 != u {
+				c.Members = append(c.Members, id)
 			}
 		}
-	}
 
-	if !exist {
-		c.Members = append(c.Members, u.ID)
 	}
 
 	convMap[c.ID] = c
 
-	conv := &pb.Conversation{
-		ID:   c.ID,
-		Name: c.Name,
-	}
-
+	conv := c.Pack()
 	u.SendToClient(message.GetSeq(), &pb.CreateConversationResp{
 		Code: pb.ErrCode_OK,
 		Conv: conv,
@@ -56,7 +46,7 @@ func onCreateConversation(u *user.User, message *codec.Message) {
 		Conv:   conv,
 		InitBy: u.ID,
 	}
-	c.Broadcast(notify, map[string]struct{}{u.ID: {}})
+	c.Broadcast(notify, u.ID)
 }
 
 func init() {
