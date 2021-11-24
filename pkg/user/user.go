@@ -17,24 +17,11 @@ func GetUser(id string) *User {
 }
 
 type User struct {
-	ID         string
-	Attrs      map[string]string
-	CreateAt   int64
-	ConvStates map[uint64]*ConversationState
-	sess       dnet.Session
-}
-
-const (
-	stateWaitActive = iota
-	stateActive
-	stateNotify
-	stateRemove
-)
-
-type ConversationState struct {
-	ConversationID uint64
-	LastReadAt     uint64 // 最后阅读的消息ID
-	State          int    // 状态
+	ID       string
+	Attrs    map[string]string
+	CreateAt int64
+	Convs    map[uint64]struct{}
+	sess     dnet.Session
 }
 
 func (this *User) SendToClient(seq uint32, msg proto.Message) {

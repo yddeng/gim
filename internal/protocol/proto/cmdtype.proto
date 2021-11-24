@@ -35,4 +35,7 @@ enum CmdType {
     CmdNotifyMessage   = 303;
     CmdQueryMessageReq = 311;
     CmdQueryMessageResp = 312;
+    CmdRecallMessageReq = 313;
+    CmdRecallMessageResp = 314;
+    CmdNotifyRecallMessage = 315;
 }

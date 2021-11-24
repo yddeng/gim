@@ -37,4 +37,7 @@ func init() {
 	pb.Register("im", &proto.NotifyMessage{}, uint16(proto.CmdType_CmdNotifyMessage))
 	pb.Register("im", &proto.QueryMessageReq{}, uint16(proto.CmdType_CmdQueryMessageReq))
 	pb.Register("im", &proto.QueryMessageResp{}, uint16(proto.CmdType_CmdQueryMessageResp))
+	pb.Register("im", &proto.RecallMessageReq{}, uint16(proto.CmdType_CmdRecallMessageReq))
+	pb.Register("im", &proto.RecallMessageResp{}, uint16(proto.CmdType_CmdRecallMessageReq))
+	pb.Register("im", &proto.NotifyRecallMessage{}, uint16(proto.CmdType_CmdNotifyRecallMessage))
 }

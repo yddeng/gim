@@ -40,11 +40,17 @@ message Message{
     string text = 1; // 文本消息
 }
 
+enum MessageState{
+    Active = 0; // 正常消息
+    Recalled = 1; // 消息撤回
+}
+
 message MessageInfo{
     Message msg      = 1;
     string  userID   = 2; // 发言的用户
     int64   createAt = 3; // 创建时间戳秒
     uint64  msgID    = 4;
+    MessageState state = 5;
 }
 
 message SendMessageReq{
@@ -153,4 +159,17 @@ message QueryMessageResp{
     ErrCode code = 1;
     Conversation conv   = 2;
     repeated MessageInfo  msgInfos = 3;
+}
+
+message RecallMessageReq{
+    uint64 convID = 1;
+    uint64 msgID  = 2;
+}
+message RecallMessageResp{
+    ErrCode code = 1;
+}
+
+message NotifyRecallMessage{
+    Conversation conv  = 1;
+    MessageInfo  msg   = 2;
 }
