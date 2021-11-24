@@ -18,8 +18,9 @@ func GetUser(id string) *User {
 
 type User struct {
 	ID       string
-	Attrs    map[string]string
 	CreateAt int64
+	UpdateAt int64
+	Attrs    map[string]string
 	Convs    map[uint64]struct{}
 	sess     dnet.Session
 }
@@ -32,17 +33,6 @@ func (this *User) SendToClient(seq uint32, msg proto.Message) {
 	if err := this.sess.Send(codec.NewMessage(seq, msg)); err != nil {
 		this.sess.Close(err)
 	}
-}
-
-func (this *User) OnNotifyInvited(notify *pb.NotifyInvited) {
-	state := &ConversationState{
-		ConversationID: notify.GetConv().GetID(),
-		LastReadAt:     0,
-		State:          stateWaitActive,
-	}
-
-	this.ConvStates[state.ConversationID] = state
-	this.SendToClient(0, notify)
 }
 
 func OnUserLogin(sess dnet.Session, msg *codec.Message) {

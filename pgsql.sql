@@ -1,3 +1,12 @@
+DROP TABLE IF EXISTS "users";
+CREATE TABLE "users" (
+"id" varchar(255) NOT NULL,
+"create_at" int8 NOT NULL,
+"update_at" int8 NOT NULL,
+"attr" bytea NOT NULL,
+"convs" bytea NOT NULL,
+PRIMARY KEY ("id")
+);
 
 DROP TABLE IF EXISTS "conversation_list";
 CREATE TABLE "conversation_list" (

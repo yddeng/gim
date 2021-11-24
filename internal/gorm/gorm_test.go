@@ -10,6 +10,7 @@ type User struct {
 	//ID   uint `gorm:"primaryKey"`
 	Name string `gorm:"primaryKey"`
 	Age  int
+	Attr []string
 }
 
 func TestOpen(t *testing.T) {

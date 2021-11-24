@@ -14,7 +14,7 @@ func init() {
 	pb.Register("im", &proto.GetConversationUsersReq{}, uint16(proto.CmdType_CmdGetConversationUsersReq))
 	pb.Register("im", &proto.GetConversationUsersResp{}, uint16(proto.CmdType_CmdGetConversationUsersResp))
 	pb.Register("im", &proto.GetConversationListReq{}, uint16(proto.CmdType_CmdGetConversationListReq))
-	pb.Register("im", &proto.GetConversationListResp{}, uint16(proto.CmdType_CmdGetConversationListReq))
+	pb.Register("im", &proto.GetConversationListResp{}, uint16(proto.CmdType_CmdGetConversationListResp))
 	pb.Register("im", &proto.DissolveConversationReq{}, uint16(proto.CmdType_CmdDissolveConversationReq))
 	pb.Register("im", &proto.DissolveConversationResp{}, uint16(proto.CmdType_CmdDissolveConversationResp))
 	pb.Register("im", &proto.NotifyDissolveConversation{}, uint16(proto.CmdType_CmdNotifyDissolveConversation))
@@ -38,6 +38,6 @@ func init() {
 	pb.Register("im", &proto.QueryMessageReq{}, uint16(proto.CmdType_CmdQueryMessageReq))
 	pb.Register("im", &proto.QueryMessageResp{}, uint16(proto.CmdType_CmdQueryMessageResp))
 	pb.Register("im", &proto.RecallMessageReq{}, uint16(proto.CmdType_CmdRecallMessageReq))
-	pb.Register("im", &proto.RecallMessageResp{}, uint16(proto.CmdType_CmdRecallMessageReq))
+	pb.Register("im", &proto.RecallMessageResp{}, uint16(proto.CmdType_CmdRecallMessageResp))
 	pb.Register("im", &proto.NotifyRecallMessage{}, uint16(proto.CmdType_CmdNotifyRecallMessage))
 }
