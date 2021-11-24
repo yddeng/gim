@@ -85,11 +85,10 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 }
 
 func OnClose(session dnet.Session, err error) {
-	log.Infof("onClose %s. ", err)
 	ctx := session.Context()
 	if ctx != nil {
 		u := ctx.(*User)
-		u.sess.SetContext(nil)
+		log.Infof("onClose user(%s) %s. ", u.ID, err)
 		u.sess = nil
 		delete(users, u.ID)
 	}

@@ -4,22 +4,25 @@ import (
 	"fmt"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/protocol"
+	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/utils/log"
+	"os"
+	"strings"
 )
 
-func initHandler() {
+var handler = map[uint16]func(dnet.Session, *codec.Message){}
 
+func registerHandler(cmdType pb.CmdType, h func(dnet.Session, *codec.Message)) {
+	cmd := uint16(cmdType)
+	if _, ok := handler[cmd]; ok {
+		panic(fmt.Sprintf("cmd %d is alreadly register. ", cmd))
+	}
+	handler[cmd] = h
 }
 
 func dispatchMessage(sess dnet.Session, msg *codec.Message) {
-	fmt.Println(msg.GetData())
-	switch msg.GetData().(type) {
-	case *protocol.UserLoginResp:
-		createConversation(sess)
-	default:
-
-		go sendMessage(sess)
-
+	if h, ok := handler[msg.GetCmd()]; ok {
+		h(sess, msg)
 	}
 }
 
@@ -44,34 +47,109 @@ func main() {
 		}),
 	)
 
-	login(sess)
+	userID := os.Args[1]
+	sess.Send(codec.NewMessage(1, &pb.UserLoginReq{
+		ID: userID,
+	}))
 
+	registerHandler(pb.CmdType_CmdUserLoginResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("UserLoginResp %v", msg.GetData().(*pb.UserLoginResp))
+	})
+	registerHandler(pb.CmdType_CmdAddMemberResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("AddMemberResp %v", msg.GetData().(*pb.AddMemberResp))
+	})
+	registerHandler(pb.CmdType_CmdRemoveMemberResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("RemoveMemberResp %v", msg.GetData().(*pb.RemoveMemberResp))
+	})
+	registerHandler(pb.CmdType_CmdJoinResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("JoinResp %v", msg.GetData().(*pb.JoinResp))
+	})
+	registerHandler(pb.CmdType_CmdQuitResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("QuitResp %v", msg.GetData().(*pb.QuitResp))
+	})
+	registerHandler(pb.CmdType_CmdSendMessageResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("SendMessageResp %v", msg.GetData().(*pb.SendMessageResp))
+	})
+	registerHandler(pb.CmdType_CmdNotifyInvited, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("NotifyInvited %v", msg.GetData().(*pb.NotifyInvited))
+	})
+	registerHandler(pb.CmdType_CmdNotifyKicked, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("NotifyKicked %v", msg.GetData().(*pb.NotifyKicked))
+	})
+	registerHandler(pb.CmdType_CmdNotifyMemberJoined, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("NotifyMemberJoined %v", msg.GetData().(*pb.NotifyMemberJoined))
+	})
+	registerHandler(pb.CmdType_CmdNotifyMemberLeft, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("NotifyMemberLeft %v", msg.GetData().(*pb.NotifyMemberLeft))
+	})
+	registerHandler(pb.CmdType_CmdNotifyMessage, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("NotifyMessage %v", msg.GetData().(*pb.NotifyMessage))
+	})
+
+	go func() {
+		for {
+			cmd(sess)
+		}
+	}()
 	select {}
 }
 
-func login(session dnet.Session) {
-	fmt.Printf("账号：")
-	var id string
-	fmt.Scan(&id)
-	session.Send(codec.NewMessage(1, &protocol.UserLoginReq{
-		ID: id,
-	}))
-}
-
-func createConversation(session dnet.Session) {
-	session.Send(codec.NewMessage(1, &protocol.CreateConversationReq{
-		Members: []string{"111"},
-	}))
-}
-
-func sendMessage(session dnet.Session) {
-	fmt.Printf("输入：")
-	var id string
-	fmt.Scan(&id)
-	session.Send(codec.NewMessage(1, &protocol.SendMessageReq{
-		ConvID: 2,
-		Msg: &protocol.Message{
-			Text: id,
-		},
-	}))
+func cmd(sess dnet.Session) {
+	fmt.Println("1:createConversation 2:addMember 3:removeMember 4:join 5:quit 6:send")
+	fmt.Printf("==>")
+	var k int
+	fmt.Scan(&k)
+	switch k {
+	case 1:
+		fmt.Printf("CreateConversation users:")
+		var users string
+		fmt.Scan(&users)
+		us := strings.Split(users, "&")
+		_ = sess.Send(codec.NewMessage(0, &pb.CreateConversationReq{
+			Members: us,
+		}))
+	case 2:
+		fmt.Printf("AddMember id,users :")
+		var id int
+		var users string
+		fmt.Scan(&id, &users)
+		us := strings.Split(users, "&")
+		_ = sess.Send(codec.NewMessage(0, &pb.AddMemberReq{
+			ConvID: uint64(id),
+			AddIds: us,
+		}))
+	case 3:
+		fmt.Printf("RemoveMember id,users :")
+		var id int
+		var users string
+		fmt.Scan(&id, &users)
+		us := strings.Split(users, "&")
+		_ = sess.Send(codec.NewMessage(0, &pb.RemoveMemberReq{
+			ConvID:    uint64(id),
+			RemoveIds: us,
+		}))
+	case 4:
+		fmt.Printf("Join id :")
+		var id int
+		fmt.Scan(&id)
+		_ = sess.Send(codec.NewMessage(0, &pb.JoinReq{
+			ConvID: uint64(id),
+		}))
+	case 5:
+		fmt.Printf("Quit id :")
+		var id int
+		fmt.Scan(&id)
+		_ = sess.Send(codec.NewMessage(0, &pb.QuitReq{
+			ConvID: uint64(id),
+		}))
+	case 6:
+		fmt.Printf("Send id,msg:")
+		var id int
+		var msg string
+		fmt.Scan(&id, &msg)
+		_ = sess.Send(codec.NewMessage(0, &pb.SendMessageReq{
+			ConvID: uint64(id),
+			Msg:    &pb.Message{Text: msg},
+		}))
+	}
 }

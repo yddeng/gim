@@ -43,17 +43,19 @@ func onAddMember(u *user.User, msg *codec.Message) {
 		}
 	}
 
-	c.AddMember(addIds)
-
 	u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK})
 
-	// 通知给群里其他人
-	notifyJoined := &pb.NotifyMemberJoined{
-		Conv:    conv,
-		JoinIds: addIds,
-		InitBy:  u.ID,
+	if len(addIds) > 0 {
+		c.AddMember(addIds)
+
+		// 通知给群里其他人
+		notifyJoined := &pb.NotifyMemberJoined{
+			Conv:    conv,
+			JoinIds: addIds,
+			InitBy:  u.ID,
+		}
+		c.Broadcast(notifyJoined, addIds...)
 	}
-	c.Broadcast(notifyJoined, addIds...)
 
 }
 
@@ -99,16 +101,18 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 		}
 	}
 
-	c.RemoveMember(rmIds)
 	u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_OK})
 
-	// 通知给群里其他人
-	notifyMemberLeft := &pb.NotifyMemberLeft{
-		Conv:     conv,
-		LeftIds:  rmIds,
-		KickedBy: u.ID,
+	if len(rmIds) > 0 {
+		c.RemoveMember(rmIds)
+		// 通知给群里其他人
+		notifyMemberLeft := &pb.NotifyMemberLeft{
+			Conv:     conv,
+			LeftIds:  rmIds,
+			KickedBy: u.ID,
+		}
+		c.Broadcast(notifyMemberLeft)
 	}
-	c.Broadcast(notifyMemberLeft)
 
 }
 
@@ -123,7 +127,7 @@ func onJoin(u *user.User, msg *codec.Message) {
 	}
 
 	conv := c.Pack()
-	if inConv := c.HasUser(u.ID); !inConv {
+	if inConv := c.HasUser(u.ID); inConv {
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_OK, Conv: conv})
 		return
 	}

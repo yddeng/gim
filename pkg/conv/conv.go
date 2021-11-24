@@ -5,6 +5,7 @@ import (
 	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/gim/pkg/user"
 	"github.com/yddeng/gim/pkg/util"
+	"github.com/yddeng/utils/log"
 )
 
 var (
@@ -74,4 +75,5 @@ func (this *Conversation) RemoveMember(ids []string) {
 	for _, id := range ids {
 		f(id, &this.Members)
 	}
+	log.Debug(this.Members)
 }
