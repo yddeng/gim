@@ -58,10 +58,6 @@ func (this *User) OnNotifyInvited(notify *pb.NotifyInvited) {
 	this.SendToClient(0, notify)
 }
 
-func (this *User) OnNotifyMessage(convID uint64) {
-
-}
-
 func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 	log.Infof("onUserLogin %v", msg)
 	req := msg.GetData().(*pb.UserLoginReq)
