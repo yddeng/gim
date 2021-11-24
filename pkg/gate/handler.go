@@ -1,8 +1,11 @@
 package gate
 
 import (
+	"errors"
 	"fmt"
+	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
+	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/gim/pkg/user"
 )
 
@@ -15,9 +18,31 @@ func RegisterHandler(cmd uint16, h func(*user.User, *codec.Message)) {
 	msgHandler[cmd] = h
 }
 
-func dispatchMessage(u *user.User, msg *codec.Message) {
-	cmd := msg.GetCmd()
-	if h, ok := msgHandler[cmd]; ok {
-		h(u, msg)
+func dispatchMessage(session dnet.Session, msg *codec.Message) {
+	switch msg.GetCmd() {
+	case uint16(pb.CmdType_CmdUserLoginReq):
+		onUserLogin(session, msg)
+	default:
+		ctx := session.Context()
+		if ctx == nil {
+			session.Close(errors.New("user is not login. "))
+			return
+		}
+
+		cmd := msg.GetCmd()
+		u := ctx.(*user.User)
+		if h, ok := msgHandler[cmd]; ok {
+			h(u, msg)
+		}
 	}
+}
+
+func onUserLogin(session dnet.Session, msg *codec.Message) {
+	//task.PostTask(func() {
+	user.OnUserLogin(session, msg)
+	//})
+}
+
+func onSessionClose(session dnet.Session, reason error) {
+	user.OnClose(session, reason)
 }
