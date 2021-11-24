@@ -7,8 +7,8 @@ import (
 )
 
 type User struct {
-	ID   uint `gorm:"primaryKey"`
-	Name string
+	//ID   uint `gorm:"primaryKey"`
+	Name string `gorm:"primaryKey"`
 	Age  int
 }
 
@@ -32,5 +32,5 @@ func TestOpen(t *testing.T) {
 	fmt.Println(sqlStr)
 
 	result := db.Create(&u)
-	fmt.Println(result.Error, u.ID)
+	fmt.Println(result.Error)
 }

@@ -8,9 +8,13 @@ enum CmdType {
 
     CmdCreateConversationReq  = 101;
     CmdCreateConversationResp = 102;
-
     CmdGetConversationUsersReq = 111;
     CmdGetConversationUsersResp = 112;
+    CmdGetConversationListReq = 121;
+    CmdGetConversationListResp = 122;
+    CmdDissolveConversationReq = 123;
+    CmdDissolveConversationResp = 124;
+    CmdNotifyDissolveConversation = 125;
 
     CmdAddMemberReq = 201;
     CmdAddMemberResp = 202;
@@ -29,4 +33,6 @@ enum CmdType {
     CmdSendMessageReq = 301;
     CmdSendMessageResp = 302;
     CmdNotifyMessage   = 303;
+    CmdQueryMessageReq = 311;
+    CmdQueryMessageResp = 312;
 }

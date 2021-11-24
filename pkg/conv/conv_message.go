@@ -26,17 +26,14 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 
 	msgID := uint64(1)
 	if c.LastMessageAt != nil {
-		msgID = c.LastMessageAt.MessageInfo.GetMsgID() + 1
+		msgID = c.LastMessageAt.GetMsgID() + 1
 	}
 
-	m := &MessageEntity{
-		MessageInfo: &pb.MessageInfo{
-			Msg:      req.GetMsg(),
-			UserID:   u.ID,
-			CreateAt: time.Now().Unix(),
-			MsgID:    msgID,
-		},
-		ConversationID: c.ID,
+	m := &pb.MessageInfo{
+		Msg:      req.GetMsg(),
+		UserID:   u.ID,
+		CreateAt: time.Now().Unix(),
+		MsgID:    msgID,
 	}
 
 	c.LastMessageAt = m
@@ -47,7 +44,7 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 
 	notifyMessage := &pb.NotifyMessage{
 		Conv:     conv,
-		MsgInfos: []*pb.MessageInfo{m.MessageInfo},
+		MsgInfos: []*pb.MessageInfo{m},
 	}
 	c.Broadcast(notifyMessage)
 }

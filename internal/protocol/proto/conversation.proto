@@ -123,8 +123,34 @@ message GetConversationUsersResp{
     repeated User users = 2;
 }
 
+// 解散会话
+message DissolveConversationReq{
+    uint64 convID = 1;
+}
+message DissolveConversationResp{
+    ErrCode code = 1;
+}
 
-//// 拉取列表
-//message GetConversationList{
-//
-//}
+message NotifyDissolveConversation{
+    uint64 convID = 1;
+    string initBy = 2;
+}
+
+// 拉取列表
+message GetConversationListReq{}
+message GetConversationListResp{
+    ErrCode code = 1;
+    repeated Conversation convs = 2;
+}
+
+// 会话消息同步
+message QueryMessageReq{
+    uint64 convID = 1;
+    uint64 startMsgID = 2; // 开始请求的消息ID
+    int32  limit      = 3; // 一次拉取多少条消息
+}
+message QueryMessageResp{
+    ErrCode code = 1;
+    Conversation conv   = 2;
+    repeated MessageInfo  msgInfos = 3;
+}

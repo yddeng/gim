@@ -13,6 +13,11 @@ func init() {
 	pb.Register("im", &proto.CreateConversationResp{}, uint16(proto.CmdType_CmdCreateConversationResp))
 	pb.Register("im", &proto.GetConversationUsersReq{}, uint16(proto.CmdType_CmdGetConversationUsersReq))
 	pb.Register("im", &proto.GetConversationUsersResp{}, uint16(proto.CmdType_CmdGetConversationUsersResp))
+	pb.Register("im", &proto.GetConversationListReq{}, uint16(proto.CmdType_CmdGetConversationListReq))
+	pb.Register("im", &proto.GetConversationListResp{}, uint16(proto.CmdType_CmdGetConversationListReq))
+	pb.Register("im", &proto.DissolveConversationReq{}, uint16(proto.CmdType_CmdDissolveConversationReq))
+	pb.Register("im", &proto.DissolveConversationResp{}, uint16(proto.CmdType_CmdDissolveConversationResp))
+	pb.Register("im", &proto.NotifyDissolveConversation{}, uint16(proto.CmdType_CmdNotifyDissolveConversation))
 
 	pb.Register("im", &proto.AddMemberReq{}, uint16(proto.CmdType_CmdAddMemberReq))
 	pb.Register("im", &proto.AddMemberResp{}, uint16(proto.CmdType_CmdAddMemberResp))
@@ -30,4 +35,6 @@ func init() {
 	pb.Register("im", &proto.SendMessageReq{}, uint16(proto.CmdType_CmdSendMessageReq))
 	pb.Register("im", &proto.SendMessageResp{}, uint16(proto.CmdType_CmdSendMessageResp))
 	pb.Register("im", &proto.NotifyMessage{}, uint16(proto.CmdType_CmdNotifyMessage))
+	pb.Register("im", &proto.QueryMessageReq{}, uint16(proto.CmdType_CmdQueryMessageReq))
+	pb.Register("im", &proto.QueryMessageResp{}, uint16(proto.CmdType_CmdQueryMessageResp))
 }
