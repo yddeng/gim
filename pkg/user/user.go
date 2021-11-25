@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
@@ -10,19 +11,20 @@ import (
 )
 
 var (
-	users = map[string]*User{}
+	userMap = map[string]*User{}
 )
 
 func GetUser(id string) *User {
-	u, ok := users[id]
+	u, ok := userMap[id]
 	if !ok {
 		var err error
 		u, err = loadUser(id)
 		if err != nil {
 			log.Error(err)
+			return nil
 		}
 		if u != nil {
-			users[id] = u
+			userMap[id] = u
 		}
 	}
 	return u
@@ -34,7 +36,6 @@ type User struct {
 	UpdateAt int64
 	Extra    map[string]string // 附加属性
 	sess     dnet.Session
-	exist    bool // 缓存击穿
 }
 
 func (this *User) SendToClient(seq uint32, msg proto.Message) {
@@ -59,11 +60,11 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 		return
 	}
 
-	u, err := loadUser(id)
-	if err != nil {
-		log.Error(err)
-		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
-		return
+	u := GetUser(id)
+	if u != nil && u.sess != nil {
+		u.sess.SetContext(nil)
+		u.sess.Close(errors.New("session kicked. "))
+		u.sess = nil
 	}
 
 	nowUnix := time.Now().Unix()
@@ -84,7 +85,7 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 		return
 	}
 
-	users[id] = u
+	userMap[id] = u
 	sess.SetContext(u)
 
 	u.SendToClient(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_OK})
@@ -95,8 +96,9 @@ func OnClose(session dnet.Session, err error) {
 	if ctx != nil {
 		u := ctx.(*User)
 		log.Infof("onClose user(%s) %s. ", u.ID, err)
+		u.sess.SetContext(nil)
 		u.sess = nil
-		delete(users, u.ID)
+		delete(userMap, u.ID)
 		_ = setNxUser(u)
 	}
 }

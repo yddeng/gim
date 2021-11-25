@@ -71,18 +71,37 @@ WHERE id = '%d';`
 -- conv_user
 -- ---------------------------- */
 
-func setNxConvUser(convID int64, userID string, role int) error {
-	sqlStatement := `
-INSERT INTO "conv_user" (id,conv_id, user_id, role)
-VALUES($1, $2, $3, $4) 
+func setNxConvUser(convID int64, users map[string]int) error {
+	sqlStr := `
+INSERT INTO "conv_user" (id, conv_id, user_id, role)
+VALUES %s
 ON conflict(id) DO 
-UPDATE SET conv_id = $2, user_id = $3, role = $4;`
-	smt, err := db.SqlDB.Prepare(sqlStatement)
-	if err != nil {
-		return err
+UPDATE SET conv_id = excluded.conv_id, user_id = excluded.user_id, role = excluded.role ;`
+
+	values := make([]string, 0, len(users))
+	for uid, role := range users {
+		values = append(values, fmt.Sprintf("('%d_%s',%d,'%s',%d)", convID, uid, convID, uid, role))
 	}
-	id := fmt.Sprintf("%d_%s", convID, userID)
-	_, err = smt.Exec(id, convID, userID, role)
+
+	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(values, ","))
+	log.Debug(sqlStatement)
+	_, err := db.SqlDB.Exec(sqlStatement)
+	return err
+}
+
+func delConvUser(convID int64, users []string) error {
+	sqlStr := `
+DELETE FROM "conv_user" 
+WHERE %s;`
+
+	keys := make([]string, 0, len(users))
+	for _, uid := range users {
+		keys = append(keys, fmt.Sprintf("id = '%d_%s'", convID, uid))
+	}
+
+	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(keys, " OR "))
+	log.Debug(sqlStatement)
+	_, err := db.SqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -158,6 +177,24 @@ CREATE TABLE "%s" (
 func makeMessageTableName() string {
 	date := time.Now().Format("20060102")
 	return "message_" + date
+}
+
+func existMessageTable(tableName string) bool {
+	sqlStr := `
+select count(*) from "%s";`
+
+	sqlStatement := fmt.Sprintf(sqlStr, tableName)
+	smt, err := db.SqlDB.Prepare(sqlStatement)
+	if err != nil {
+		return false
+	}
+	row := smt.QueryRow()
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func createMessageTable(tableName string) error {

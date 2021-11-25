@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+var tableName string
+
+func InitMessageTable() {
+	tableName = makeMessageTableName()
+	if exist := existMessageTable(tableName); !exist {
+		createMessageTable(tableName)
+	}
+}
+
 func onSendMessage(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.SendMessageReq)
 	log.Debugf("onSendMessage %v", req)
@@ -32,10 +41,27 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 		MsgID:    msgID,
 	}
 
+	nowTableName := makeMessageTableName()
+	if tableName != nowTableName {
+		tableName = nowTableName
+		if err := createMessageTable(tableName); err != nil {
+			log.Error(err)
+			u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
+			return
+		}
+	}
+	if err := insertMessage(c.ID, m, tableName); err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
+		return
+	}
+
 	c.LastMessage = m
 	c.LastMessageID = m.GetMsgID()
 	c.LastMessageAt = m.GetCreateAt()
 	c.Message = append(c.Message, m)
+
+	updateConversation(c)
 
 	conv := c.Pack()
 	u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Conv: conv})

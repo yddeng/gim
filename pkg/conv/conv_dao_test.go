@@ -50,24 +50,27 @@ func TestConvUser(t *testing.T) {
 	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
 
 	convID := int64(1)
-	userID := "ydd"
-	role := 0
+	users := map[string]int{"ydd": 1, "ydd2": 0}
 
-	if err := setNxConvUser(convID, userID, role); err != nil {
+	if err := setNxConvUser(convID, users); err != nil {
 		t.Error(err)
 	}
 
-	convs, err := getUserConversations(userID)
+	convs, err := getUserConversations("ydd")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(convs)
 
-	users, err := getConversationUsers(convID)
+	user, err := getConversationUsers(convID)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(users)
+	t.Log(user)
+
+	if err := delConvUser(convID, []string{"ydd", "ydd2"}); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestDate(t *testing.T) {
@@ -88,6 +91,11 @@ func TestMessage(t *testing.T) {
 		Recalled: false,
 	}
 	tableName := makeMessageTableName()
+
+	if exist := existMessageTable(tableName); !exist {
+		t.Log("not exist")
+		createMessageTable(tableName)
+	}
 
 	for i := int64(1); i <= 20; i++ {
 		msg.MsgID = i

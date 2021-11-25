@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	convMap         = map[int64]*Conversation{}
-	nowMessageTable string
+	convMap = map[int64]*Conversation{}
 )
 
 func GetConversation(convID int64) *Conversation {
@@ -93,13 +92,28 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 	c.Members[u.ID] = 1
 	for _, id := range req.GetMembers() {
 		if u2 := user.GetUser(id); u2 != nil {
-			if u2 != u {
+			if u.ID != id {
 				c.Members[id] = 0
 			}
 		}
 	}
 
+	if len(c.Members) < 2 {
+		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
+			Code: pb.ErrCode_RequestArgumentErr,
+		})
+		return
+	}
+
 	if err := insertConversation(c); err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
+			Code: pb.ErrCode_Error,
+		})
+		return
+	}
+
+	if err := setNxConvUser(c.ID, c.Members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
 			Code: pb.ErrCode_Error,
