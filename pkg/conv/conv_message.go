@@ -50,7 +50,7 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 			return
 		}
 	}
-	if err := insertMessage(c.ID, m, tableName); err != nil {
+	if err := setNxMessage(c.ID, m, tableName); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
 		return

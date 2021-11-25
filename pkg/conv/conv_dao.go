@@ -203,18 +203,12 @@ func createMessageTable(tableName string) error {
 	return err
 }
 
-func insertMessage(convID int64, msg *pb.MessageInfo, tableName string) error {
-	//tableName := makeMessageTableName()
-	//if tableName != nowMessageTable {
-	//	nowMessageTable = tableName
-	//	if err := createMessageTable(tableName); err != nil {
-	//		return err
-	//	}
-	//}
-
+func setNxMessage(convID int64, msg *pb.MessageInfo, tableName string) error {
 	sqlStr := `
 INSERT INTO "%s" (id,conv_id,message_id,message)  
-VALUES ($1,$2,$3,$4);`
+VALUES ($1,$2,$3,$4)
+ON conflict(id) DO 
+UPDATE SET message = $4;`
 
 	sqlStatement := fmt.Sprintf(sqlStr, tableName)
 	id := fmt.Sprintf("%d_%d", convID, msg.GetMsgID())

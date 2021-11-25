@@ -99,7 +99,7 @@ func TestMessage(t *testing.T) {
 
 	for i := int64(1); i <= 20; i++ {
 		msg.MsgID = i
-		if err := insertMessage(1, msg, tableName); err != nil {
+		if err := setNxMessage(1, msg, tableName); err != nil {
 			t.Error(err)
 		}
 	}
