@@ -23,7 +23,7 @@ func onAddMember(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if inConv := c.HasUser(u.ID); !inConv {
+	if _, inConv := c.Members[u.ID]; !inConv {
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_UserNotInConversation})
 		return
 	}
@@ -31,7 +31,7 @@ func onAddMember(u *user.User, msg *codec.Message) {
 	conv := c.Pack()
 	var addIds = make([]string, 0, len(req.GetAddIds()))
 	for _, id := range req.GetAddIds() {
-		if exist := c.HasUser(id); !exist {
+		if _, exist := c.Members[u.ID]; !exist {
 			// load 数据库
 			if u2 := user.GetUser(id); u2 != nil {
 				addIds = append(addIds, id)
@@ -74,7 +74,7 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if inConv := c.HasUser(u.ID); !inConv {
+	if _, inConv := c.Members[u.ID]; !inConv {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotInConversation})
 		return
 	}
@@ -88,7 +88,7 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 	conv := c.Pack()
 	var rmIds = make([]string, 0, len(req.GetRemoveIds()))
 	for _, id := range req.GetRemoveIds() {
-		if exist := c.HasUser(id); exist {
+		if _, exist := c.Members[u.ID]; exist {
 			rmIds = append(rmIds, id)
 
 			// load 数据库
@@ -127,7 +127,7 @@ func onJoin(u *user.User, msg *codec.Message) {
 	}
 
 	conv := c.Pack()
-	if inConv := c.HasUser(u.ID); inConv {
+	if _, inConv := c.Members[u.ID]; inConv {
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_OK, Conv: conv})
 		return
 	}
@@ -155,7 +155,7 @@ func onQuit(u *user.User, msg *codec.Message) {
 	}
 
 	conv := c.Pack()
-	if inConv := c.HasUser(u.ID); !inConv {
+	if _, inConv := c.Members[u.ID]; !inConv {
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_OK, Conv: conv})
 		return
 	}

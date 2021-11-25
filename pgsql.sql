@@ -10,8 +10,13 @@ PRIMARY KEY ("id")
 
 DROP TABLE IF EXISTS "conversation_list";
 CREATE TABLE "conversation_list" (
-    "id"           SERIAL,
-    "name"         varchar(52)   NOT NULL,
-    "age"          int8 NOT NULL DEFAULT '0' ,
+    "id"               SERIAL8,
+    "type"             int4 NOT NULL ,
+    "name"             varchar(255),
+    "creator"          varchar(255) NOT NULL ,
+    "create_at"        int8 NOT NULL,
+    "last_message_id"  int8 NOT NULL DEFAULT 0,
+    "last_message_at"  int8 NOT NULL DEFAULT 0,
+    "members"          bytea NOT NULL,
     PRIMARY KEY ("id")
-) ;
+);

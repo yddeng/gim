@@ -19,16 +19,12 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if inConv := c.HasUser(u.ID); !inConv {
+	if _, inConv := c.Members[u.ID]; !inConv {
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInConversation})
 		return
 	}
 
-	msgID := uint64(1)
-	if c.LastMessageAt != nil {
-		msgID = c.LastMessageAt.GetMsgID() + 1
-	}
-
+	msgID := c.LastMessageID + 1
 	m := &pb.MessageInfo{
 		Msg:      req.GetMsg(),
 		UserID:   u.ID,
@@ -36,7 +32,9 @@ func onSendMessage(u *user.User, msg *codec.Message) {
 		MsgID:    msgID,
 	}
 
-	c.LastMessageAt = m
+	c.LastMessage = m
+	c.LastMessageID = m.GetMsgID()
+	c.LastMessageAt = m.GetCreateAt()
 	c.Message = append(c.Message, m)
 
 	conv := c.Pack()

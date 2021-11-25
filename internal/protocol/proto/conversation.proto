@@ -12,10 +12,10 @@ enum ConversationType{
 
 message Conversation{
     ConversationType type = 1;
-    uint64 ID   = 2;
+    int64 ID   = 2;
     string name = 3;
-    uint64 lastMessageID = 4; // 最后一条消息的ID
-    int64  lastMessageTimestamp = 5; // 最后一条消息的时间
+    int64 lastMessageID = 4; // 最后一条消息的ID
+    int64  lastMessageAt = 5; // 最后一条消息的时间
 }
 
 // 创建对话
@@ -40,21 +40,16 @@ message Message{
     string text = 1; // 文本消息
 }
 
-enum MessageState{
-    Active = 0; // 正常消息
-    Recalled = 1; // 消息撤回
-}
-
 message MessageInfo{
     Message msg      = 1;
     string  userID   = 2; // 发言的用户
     int64   createAt = 3; // 创建时间戳秒
-    uint64  msgID    = 4;
-    MessageState state = 5;
+    int64  msgID    = 4;
+    bool    recalled = 5; // 撤回
 }
 
 message SendMessageReq{
-    uint64  convID = 1;
+    int64  convID = 1;
     Message msg    = 2;
 }
 
@@ -69,7 +64,7 @@ message NotifyMessage{
 }
 
 message AddMemberReq{
-    uint64 convID = 1;
+    int64 convID = 1;
     repeated string addIds = 2;
 }
 
@@ -84,7 +79,7 @@ message NotifyMemberJoined{
 }
 
 message RemoveMemberReq{
-    uint64 convID = 1;
+    int64 convID = 1;
     repeated string removeIds = 2;
 }
 
@@ -104,7 +99,7 @@ message NotifyKicked{
 }
 
 message JoinReq{
-    uint64 convID = 1;
+    int64 convID = 1;
 }
 message JoinResp{
     ErrCode code = 1;
@@ -113,7 +108,7 @@ message JoinResp{
 
 // 主动
 message QuitReq{
-    uint64 convID = 1;
+    int64 convID = 1;
 }
 message QuitResp{
     ErrCode code = 1;
@@ -122,7 +117,7 @@ message QuitResp{
 
 // 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性
 message GetConversationUsersReq{
-    uint64 convID = 1;
+    int64 convID = 1;
 }
 message GetConversationUsersResp{
     ErrCode code = 1;
@@ -131,14 +126,14 @@ message GetConversationUsersResp{
 
 // 解散会话
 message DissolveConversationReq{
-    uint64 convID = 1;
+    int64 convID = 1;
 }
 message DissolveConversationResp{
     ErrCode code = 1;
 }
 
 message NotifyDissolveConversation{
-    uint64 convID = 1;
+    int64 convID = 1;
     string initBy = 2;
 }
 
@@ -151,8 +146,8 @@ message GetConversationListResp{
 
 // 会话消息同步
 message QueryMessageReq{
-    uint64 convID = 1;
-    uint64 startMsgID = 2; // 开始请求的消息ID
+    int64 convID = 1;
+    int64 startMsgID = 2; // 开始请求的消息ID
     int32  limit      = 3; // 一次拉取多少条消息
 }
 message QueryMessageResp{
@@ -162,8 +157,8 @@ message QueryMessageResp{
 }
 
 message RecallMessageReq{
-    uint64 convID = 1;
-    uint64 msgID  = 2;
+    int64 convID = 1;
+    int64 msgID  = 2;
 }
 message RecallMessageResp{
     ErrCode code = 1;

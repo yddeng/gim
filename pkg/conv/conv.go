@@ -12,42 +12,41 @@ import (
 )
 
 var (
-	convID  = uint64(1)
-	convMap = map[uint64]*Conversation{}
+	convID  = int64(1)
+	convMap = map[int64]*Conversation{}
 )
 
-func GetConversation(convID uint64) *Conversation {
+func GetConversation(convID int64) *Conversation {
 	return convMap[convID]
 }
 
 type Conversation struct {
 	Type          pb.ConversationType // 对话类型
-	ID            uint64              // 全局唯一ID
+	ID            int64               // 全局唯一ID
+	Name          string              // 会话名
 	Creator       string              // 对话创建者
 	CreateAt      int64               // 创建时间戳 秒
-	Members       []string            // 成员列表
-	Name          string              // 会话名
-	LastMessageAt *pb.MessageInfo     // 最后一条消息
+	Members       map[string]struct{} // 成员列表
+	LastMessageAt int64               // 最后一条消息的时间
+	LastMessageID int64               // 最后一条消息的ID
+	LastMessage   *pb.MessageInfo     // 最后一条消息
 	Message       []*pb.MessageInfo
 }
 
 func (this *Conversation) Pack() *pb.Conversation {
 	c := &pb.Conversation{
-		Type: this.Type,
-		ID:   this.ID,
-		Name: this.Name,
-	}
-
-	if this.LastMessageAt != nil {
-		c.LastMessageTimestamp = this.LastMessageAt.GetCreateAt()
-		c.LastMessageID = this.LastMessageAt.GetMsgID()
+		Type:          this.Type,
+		ID:            this.ID,
+		Name:          this.Name,
+		LastMessageAt: this.LastMessageAt,
+		LastMessageID: this.LastMessageID,
 	}
 
 	return c
 }
 
 func (this *Conversation) Broadcast(msg proto.Message, except ...string) {
-	for _, id := range this.Members {
+	for id := range this.Members {
 		if has := util.HasString(id, except); !has {
 			u := user.GetUser(id)
 			if u != nil {
@@ -57,28 +56,25 @@ func (this *Conversation) Broadcast(msg proto.Message, except ...string) {
 	}
 }
 
-func (this *Conversation) HasUser(id string) bool {
-	return util.HasString(id, this.Members)
-}
-
 func (this *Conversation) AddMember(ids []string) {
-	this.Members = append(this.Members, ids...)
+	for _, id := range ids {
+		this.Members[id] = struct{}{}
+	}
 }
 
 func (this *Conversation) RemoveMember(ids []string) {
-	f := func(s string, m *[]string) {
-		for i, v := range *m {
-			if v == s {
-				*m = append((*m)[:i], (*m)[i+1:]...)
-				break
-			}
-		}
-	}
+	//f := func(s string, m *[]string) {
+	//	for i, v := range *m {
+	//		if v == s {
+	//			*m = append((*m)[:i], (*m)[i+1:]...)
+	//			break
+	//		}
+	//	}
+	//}
 
 	for _, id := range ids {
-		f(id, &this.Members)
+		delete(this.Members, id)
 	}
-	log.Debug(this.Members)
 }
 
 func onCreateConversation(u *user.User, msg *codec.Message) {
@@ -90,17 +86,17 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 		ID:       convID,
 		Creator:  u.ID,
 		CreateAt: nowUnix,
-		Members:  make([]string, 0, len(req.GetMembers())),
+		Members:  make(map[string]struct{}, len(req.GetMembers())),
 		Name:     req.GetName(),
 	}
 	convID++
 
-	c.Members = append(c.Members, u.ID)
+	c.Members[u.ID] = struct{}{}
 	for _, id := range req.GetMembers() {
 		// load 数据库
 		if u2 := user.GetUser(id); u2 != nil {
 			if u2 != u {
-				c.Members = append(c.Members, id)
+				c.Members[id] = struct{}{}
 			}
 		}
 

@@ -7,7 +7,7 @@ import (
 	"github.com/yddeng/utils/log"
 )
 
-func LoadUser(key string) (*User, error) {
+func loadUser(key string) (*User, error) {
 	sqlStr := `
 SELECT * FROM "users" 
 WHERE id = '%s';`
@@ -36,7 +36,7 @@ WHERE id = '%s';`
 	return &u, nil
 }
 
-func SetNxUser(u *User) error {
+func setNxUser(u *User) error {
 	sqlStatement := `
 INSERT INTO "users" (id,create_at,update_at,attr,convs)
 VALUES($1, $2, $3, $4, $5) 

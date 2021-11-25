@@ -15,7 +15,7 @@ func init() {
 func TestLoadUser(t *testing.T) {
 	conf := config.GetConfig().DBConfig
 	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
-	u, err := LoadUser("ydd")
+	u, err := loadUser("ydd")
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,11 +34,11 @@ func TestSetNxUser(t *testing.T) {
 		Convs:    map[uint64]struct{}{123123: {}},
 	}
 
-	if err := SetNxUser(u); err != nil {
+	if err := setNxUser(u); err != nil {
 		t.Error(err)
 	}
 
-	u, err := LoadUser("ydd")
+	u, err := loadUser("ydd")
 	if err != nil {
 		t.Error(err)
 	}
