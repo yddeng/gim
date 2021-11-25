@@ -20,3 +20,16 @@ CREATE TABLE "conversation_list" (
     "members"          bytea NOT NULL,
     PRIMARY KEY ("id")
 );
+
+/*
+DROP TABLE IF EXISTS "message_2021125";
+CREATE TABLE "message_2021125" (
+    "id"           varchar(255) NOT NULL,
+    "conv_id"      int8 NOT NULL ,
+    "message_id"   int8 NOT NULL,
+    "message"      bytea NOT NULL,
+    PRIMARY KEY ("id")
+);
+ */
+
+ 

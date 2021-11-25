@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	convID  = int64(1)
-	convMap = map[int64]*Conversation{}
+	convID          = int64(1)
+	convMap         = map[int64]*Conversation{}
+	nowMessageTable string
 )
 
 func GetConversation(convID int64) *Conversation {

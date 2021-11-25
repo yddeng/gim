@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"fmt"
 	"github.com/yddeng/gim/config"
 	"github.com/yddeng/gim/internal/db"
 	"github.com/yddeng/gim/internal/protocol/pb"
@@ -41,6 +42,48 @@ func TestDBConversation(t *testing.T) {
 	conv.LastMessageAt = time.Now().Unix()
 	if err := updateConversation(conv); err != nil {
 		t.Error(err)
+	}
+
+}
+
+func TestDate(t *testing.T) {
+	t.Log(time.Now().AddDate(0, -2, -20).Format("20060102"))
+}
+
+func TestMessage(t *testing.T) {
+	conf := config.GetConfig().DBConfig
+	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
+
+	msg := &pb.MessageInfo{
+		Msg: &pb.Message{
+			Text: "hello world",
+		},
+		UserID:   "ydd",
+		CreateAt: time.Now().Unix(),
+		MsgID:    1,
+		Recalled: false,
+	}
+
+	for i := int64(1); i <= 20; i++ {
+		msg.MsgID = i
+		if err := insertMessage(1, msg); err != nil {
+			t.Error(err)
+		}
+	}
+
+	tableName := makeMessageTableName()
+	limit := 10
+	infos, err := loadMessageBatch(1, 15, limit, tableName)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(infos) < limit {
+		// 部分数据不在当前表中，应向前或向后查找
+		t.Log(fmt.Sprintf("table %s not enough message", tableName))
+	}
+	for _, v := range infos {
+		t.Log(v)
 	}
 
 }
