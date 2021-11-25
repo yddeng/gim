@@ -2,13 +2,19 @@ package user
 
 import (
 	"fmt"
+	"github.com/yddeng/gim/config"
 	"github.com/yddeng/gim/internal/db"
 	"testing"
 	"time"
 )
 
+func init() {
+	config.LoadConfig("../../config/config.toml")
+}
+
 func TestLoadUser(t *testing.T) {
-	db.Open("pgsql", "localhost", 5432, "yidongdeng", "dbuser", "123456")
+	conf := config.GetConfig().DBConfig
+	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
 	u, err := LoadUser("ydd")
 	if err != nil {
 		t.Error(err)
@@ -17,7 +23,8 @@ func TestLoadUser(t *testing.T) {
 }
 
 func TestSetNxUser(t *testing.T) {
-	db.Open("pgsql", "localhost", 5432, "yidongdeng", "dbuser", "123456")
+	conf := config.GetConfig().DBConfig
+	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
 
 	u := &User{
 		ID:       "ydd",

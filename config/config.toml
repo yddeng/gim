@@ -1,0 +1,17 @@
+Address           = "127.0.0.1:43210"
+MaxBackups        = 3                # 聊天记录保留时间,天
+MaxMessageCount   = 200              # 每个会话最大消息缓存
+
+[DBConfig]
+SqlType               = "postgres"
+Host                  = "localhost"
+Port                  = 5432
+User		          = "dbuser"
+Password              = "123456"
+Database              = "yidongdeng"
+
+[LogConfig]
+Path            = "log"
+Debug           = true
+MaxSize         = 100    # M
+EnableStdout    = true

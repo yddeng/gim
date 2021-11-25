@@ -6,6 +6,7 @@ import (
 
 type Config struct {
 	Address         string `toml:"Address"`
+	MaxBackups      int    `toml:"MaxBackups"`
 	MaxMessageCount int    `toml:"MaxMessageCount"`
 	DBConfig        struct {
 		SqlType  string `toml:"SqlType"`
@@ -13,8 +14,14 @@ type Config struct {
 		Port     int    `toml:"Port"`
 		User     string `toml:"User"`
 		Password string `toml:"Password"`
-		DataBase string `toml:"DataBase"`
+		Database string `toml:"Database"`
 	} `toml:"DBConfig"`
+	LogConfig struct {
+		Path         string `toml:"Path"`
+		Debug        bool   `toml:"Debug"`
+		MaxSize      int    `toml:"MaxSize"`
+		EnableStdout bool   `toml:"EnableStdout"`
+	} `toml:"LogConfig"`
 }
 
 var config *Config
