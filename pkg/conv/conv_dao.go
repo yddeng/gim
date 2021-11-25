@@ -1,7 +1,6 @@
 package conv
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/gim/internal/db"
@@ -20,8 +19,7 @@ WHERE id = '%d';`
 	log.Debug(sqlStatement)
 
 	var conv Conversation
-	var member []byte
-	rows, err := db.DB().Query(sqlStatement)
+	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -38,42 +36,108 @@ WHERE id = '%d';`
 		&conv.Creator,
 		&conv.CreateAt,
 		&conv.LastMessageID,
-		&conv.LastMessageAt,
-		&member); err != nil {
+		&conv.LastMessageAt); err != nil {
 		return nil, err
 	}
-
-	_ = json.Unmarshal(member, &conv.Members)
 
 	return &conv, nil
 }
 
-func setConversation(conv *Conversation) error {
+func insertConversation(conv *Conversation) error {
 	sqlStatement := `
-INSERT INTO "conversation_list" (type,name,creator,create_at,members)  
-VALUES ($1,$2,$3,$4,$5)
+INSERT INTO "conversation_list" (type,name,creator,create_at)  
+VALUES ($1,$2,$3,$4)
 RETURNING id;`
 
-	member, _ := json.Marshal(conv.Members)
-	return db.DB().QueryRow(sqlStatement,
+	return db.SqlDB.QueryRow(sqlStatement,
 		int32(conv.Type),
 		conv.Name,
 		conv.Creator,
-		conv.CreateAt,
-		member).Scan(&conv.ID)
+		conv.CreateAt).Scan(&conv.ID)
 }
 
 func updateConversation(conv *Conversation) error {
 	sqlStr := `
 UPDATE "conversation_list" 
-SET name = $1, last_message_id = $2, last_message_at = $3, members = $4
+SET name = $1, last_message_id = $2, last_message_at = $3
 WHERE id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, conv.ID)
-	member, _ := json.Marshal(conv.Members)
-
-	_, err := db.DB().Exec(sqlStatement, conv.Name, conv.LastMessageID, conv.LastMessageAt, member)
+	_, err := db.SqlDB.Exec(sqlStatement, conv.Name, conv.LastMessageID, conv.LastMessageAt)
 	return err
+}
+
+/*  -- ----------------------------
+-- conv_user
+-- ---------------------------- */
+
+func setNxConvUser(convID int64, userID string, role int) error {
+	sqlStatement := `
+INSERT INTO "conv_user" (id,conv_id, user_id, role)
+VALUES($1, $2, $3, $4) 
+ON conflict(id) DO 
+UPDATE SET conv_id = $2, user_id = $3, role = $4;`
+	smt, err := db.SqlDB.Prepare(sqlStatement)
+	if err != nil {
+		return err
+	}
+	id := fmt.Sprintf("%d_%s", convID, userID)
+	_, err = smt.Exec(id, convID, userID, role)
+	return err
+}
+
+func getUserConversations(userID string) (map[int64]int, error) {
+	sqlStr := `
+SELECT conv_id, role FROM "conv_user" 
+WHERE user_id = '%s';`
+
+	sqlStatement := fmt.Sprintf(sqlStr, userID)
+	log.Debug(sqlStatement)
+
+	rows, err := db.SqlDB.Query(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+
+	convs := map[int64]int{}
+	defer rows.Close()
+	for rows.Next() {
+		var convID int64
+		var role int
+		err = rows.Scan(&convID, &role)
+		if err != nil {
+			return nil, err
+		}
+		convs[convID] = role
+	}
+	return convs, nil
+}
+
+func getConversationUsers(convID int64) (map[string]int, error) {
+	sqlStr := `
+SELECT user_id, role FROM "conv_user" 
+WHERE conv_id = '%d';`
+
+	sqlStatement := fmt.Sprintf(sqlStr, convID)
+	log.Debug(sqlStatement)
+
+	rows, err := db.SqlDB.Query(sqlStatement)
+	if err != nil {
+		return nil, err
+	}
+
+	users := map[string]int{}
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		var role int
+		err = rows.Scan(&userID, &role)
+		if err != nil {
+			return nil, err
+		}
+		users[userID] = role
+	}
+	return users, nil
 }
 
 /*  -- ----------------------------
@@ -98,7 +162,7 @@ func makeMessageTableName() string {
 
 func createMessageTable(tableName string) error {
 	sqlStatement := fmt.Sprintf(createMessageTableStr, tableName, tableName)
-	_, err := db.DB().Exec(sqlStatement)
+	_, err := db.SqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -118,13 +182,13 @@ VALUES ($1,$2,$3,$4);`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName)
 	id := fmt.Sprintf("%d_%d", convID, msg.GetMsgID())
 	data, _ := proto.Marshal(msg)
-	_, err := db.DB().Exec(sqlStatement, id, convID, msg.GetMsgID(), data)
+	_, err := db.SqlDB.Exec(sqlStatement, id, convID, msg.GetMsgID(), data)
 	return err
 }
 
 func loadMessageBatch(convID int64, start, limit int, tableName string) ([]*pb.MessageInfo, error) {
 	sqlStr := `
-SELECT (message) FROM "%s" 
+SELECT message FROM "%s" 
 WHERE %s;`
 
 	keys := make([]string, 0, limit)
@@ -136,7 +200,7 @@ WHERE %s;`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, strings.Join(keys, " OR "))
 	log.Debug(sqlStatement)
 
-	rows, err := db.DB().Query(sqlStatement)
+	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}

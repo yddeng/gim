@@ -6,6 +6,7 @@ import (
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/utils/log"
+	"time"
 )
 
 var (
@@ -13,23 +14,35 @@ var (
 )
 
 func GetUser(id string) *User {
-	return users[id]
+	u, ok := users[id]
+	if !ok {
+		var err error
+		u, err = loadUser(id)
+		if err != nil {
+			log.Error(err)
+		}
+		if u != nil {
+			users[id] = u
+		}
+	}
+	return u
 }
 
 type User struct {
 	ID       string
 	CreateAt int64
 	UpdateAt int64
-	Attrs    map[string]string
-	Convs    map[uint64]struct{}
+	Extra    map[string]string // 附加属性
 	sess     dnet.Session
+	exist    bool // 缓存击穿
 }
 
 func (this *User) SendToClient(seq uint32, msg proto.Message) {
+	disposeHook(this, msg)
+
 	if this.sess == nil {
 		return
 	}
-	disposeHook(this, msg)
 	if err := this.sess.Send(codec.NewMessage(seq, msg)); err != nil {
 		this.sess.Close(err)
 	}
@@ -46,9 +59,29 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 		return
 	}
 
-	u := &User{
-		ID:   id,
-		sess: sess,
+	u, err := loadUser(id)
+	if err != nil {
+		log.Error(err)
+		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
+		return
+	}
+
+	nowUnix := time.Now().Unix()
+	if u == nil {
+		u = &User{
+			ID:       id,
+			CreateAt: nowUnix,
+		}
+	}
+
+	u.UpdateAt = nowUnix
+	u.Extra = req.GetExtra()
+	u.sess = sess
+
+	if err := setNxUser(u); err != nil {
+		log.Error(err)
+		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
+		return
 	}
 
 	users[id] = u
@@ -64,5 +97,6 @@ func OnClose(session dnet.Session, err error) {
 		log.Infof("onClose user(%s) %s. ", u.ID, err)
 		u.sess = nil
 		delete(users, u.ID)
+		_ = setNxUser(u)
 	}
 }

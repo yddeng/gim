@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	convID          = int64(1)
 	convMap         = map[int64]*Conversation{}
 	nowMessageTable string
 )
@@ -27,11 +26,11 @@ type Conversation struct {
 	Name          string              // 会话名
 	Creator       string              // 对话创建者
 	CreateAt      int64               // 创建时间戳 秒
-	Members       map[string]struct{} // 成员列表
 	LastMessageAt int64               // 最后一条消息的时间
 	LastMessageID int64               // 最后一条消息的ID
 	LastMessage   *pb.MessageInfo     // 最后一条消息
 	Message       []*pb.MessageInfo
+	Members       map[string]int // id -> role
 }
 
 func (this *Conversation) Pack() *pb.Conversation {
@@ -59,7 +58,7 @@ func (this *Conversation) Broadcast(msg proto.Message, except ...string) {
 
 func (this *Conversation) AddMember(ids []string) {
 	for _, id := range ids {
-		this.Members[id] = struct{}{}
+		this.Members[id] = 0
 	}
 }
 
@@ -84,23 +83,28 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 
 	nowUnix := time.Now().Unix()
 	c := &Conversation{
-		ID:       convID,
+		Type:     pb.ConversationType_Normal,
+		Name:     req.GetName(),
 		Creator:  u.ID,
 		CreateAt: nowUnix,
-		Members:  make(map[string]struct{}, len(req.GetMembers())),
-		Name:     req.GetName(),
+		Members:  make(map[string]int, 16),
 	}
-	convID++
 
-	c.Members[u.ID] = struct{}{}
+	c.Members[u.ID] = 1
 	for _, id := range req.GetMembers() {
-		// load 数据库
 		if u2 := user.GetUser(id); u2 != nil {
 			if u2 != u {
-				c.Members[id] = struct{}{}
+				c.Members[id] = 0
 			}
 		}
+	}
 
+	if err := insertConversation(c); err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
+			Code: pb.ErrCode_Error,
+		})
+		return
 	}
 
 	convMap[c.ID] = c

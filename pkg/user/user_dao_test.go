@@ -30,8 +30,7 @@ func TestSetNxUser(t *testing.T) {
 		ID:       "ydd",
 		CreateAt: time.Now().Unix(),
 		UpdateAt: time.Now().Unix(),
-		Attrs:    map[string]string{"name": "ydd", "age": "24"},
-		Convs:    map[uint64]struct{}{123123: {}},
+		Extra:    map[string]string{"name": "ydd", "age": "24"},
 	}
 
 	if err := setNxUser(u); err != nil {

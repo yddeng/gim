@@ -16,8 +16,8 @@ WHERE id = '%s';`
 	log.Debug(sqlStatement)
 
 	var u User
-	var attr, convs []byte
-	rows, err := db.DB().Query(sqlStatement)
+	var extra []byte
+	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -27,28 +27,25 @@ WHERE id = '%s';`
 		return nil, nil
 	}
 
-	if err := rows.Scan(&u.ID, &u.CreateAt, &u.UpdateAt, &attr, &convs); err != nil {
+	if err := rows.Scan(&u.ID, &u.CreateAt, &u.UpdateAt, &extra); err != nil {
 		return nil, err
 	}
-	_ = json.Unmarshal(attr, &u.Attrs)
-	_ = json.Unmarshal(attr, &u.Convs)
-
+	_ = json.Unmarshal(extra, &u.Extra)
 	return &u, nil
 }
 
 func setNxUser(u *User) error {
 	sqlStatement := `
-INSERT INTO "users" (id,create_at,update_at,attr,convs)
-VALUES($1, $2, $3, $4, $5) 
+INSERT INTO "users" (id,create_at,update_at,extra)
+VALUES($1, $2, $3, $4) 
 ON conflict(id) DO 
-UPDATE SET create_at = $2, update_at = $3, attr = $4, convs = $5;`
-	smt, err := db.DB().Prepare(sqlStatement)
+UPDATE SET create_at = $2, update_at = $3, extra = $4;`
+	smt, err := db.SqlDB.Prepare(sqlStatement)
 	if err != nil {
 		return err
 	}
 
-	attr, _ := json.Marshal(u.Attrs)
-	conv, _ := json.Marshal(u.Convs)
-	_, err = smt.Exec(u.ID, u.CreateAt, u.UpdateAt, attr, conv)
+	extra, _ := json.Marshal(u.Extra)
+	_, err = smt.Exec(u.ID, u.CreateAt, u.UpdateAt, extra)
 	return err
 }

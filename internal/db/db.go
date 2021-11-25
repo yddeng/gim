@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	sqlDB *sql.DB
+	SqlDB *sql.DB
 )
 
 func pgsqlOpen(host string, port int, dbname string, user string, password string) (*sql.DB, error) {
@@ -22,13 +22,9 @@ func mysqlOpen(host string, port int, dbname string, user string, password strin
 
 func Open(sqlType string, host string, port int, dbname string, user string, password string) (err error) {
 	if sqlType == "mysql" {
-		sqlDB, err = mysqlOpen(host, port, dbname, user, password)
+		SqlDB, err = mysqlOpen(host, port, dbname, user, password)
 	} else {
-		sqlDB, err = pgsqlOpen(host, port, dbname, user, password)
+		SqlDB, err = pgsqlOpen(host, port, dbname, user, password)
 	}
 	return
-}
-
-func DB() *sql.DB {
-	return sqlDB
 }

@@ -12,6 +12,7 @@ Database              = "yidongdeng"
 
 [LogConfig]
 Path            = "log"
-Debug           = true
+Filename        = "im"
 MaxSize         = 100    # M
+Debug           = true
 EnableStdout    = true

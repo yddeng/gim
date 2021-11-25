@@ -13,7 +13,7 @@ func init() {
 	config.LoadConfig("../../config/config.toml")
 }
 
-func TestDBConversation(t *testing.T) {
+func TestConversation(t *testing.T) {
 	conf := config.GetConfig().DBConfig
 	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
 
@@ -23,10 +23,9 @@ func TestDBConversation(t *testing.T) {
 		Name:     "test",
 		Creator:  "ydd",
 		CreateAt: time.Now().Unix(),
-		Members:  map[string]struct{}{"ydd": {}},
 	}
 
-	if err := setConversation(conv); err != nil {
+	if err := insertConversation(conv); err != nil {
 		t.Error(err)
 	}
 	t.Log(conv.ID)
@@ -46,6 +45,31 @@ func TestDBConversation(t *testing.T) {
 
 }
 
+func TestConvUser(t *testing.T) {
+	conf := config.GetConfig().DBConfig
+	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
+
+	convID := int64(1)
+	userID := "ydd"
+	role := 0
+
+	if err := setNxConvUser(convID, userID, role); err != nil {
+		t.Error(err)
+	}
+
+	convs, err := getUserConversations(userID)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(convs)
+
+	users, err := getConversationUsers(convID)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(users)
+}
+
 func TestDate(t *testing.T) {
 	t.Log(time.Now().AddDate(0, -2, -20).Format("20060102"))
 }
@@ -63,15 +87,15 @@ func TestMessage(t *testing.T) {
 		MsgID:    1,
 		Recalled: false,
 	}
+	tableName := makeMessageTableName()
 
 	for i := int64(1); i <= 20; i++ {
 		msg.MsgID = i
-		if err := insertMessage(1, msg); err != nil {
+		if err := insertMessage(1, msg, tableName); err != nil {
 			t.Error(err)
 		}
 	}
 
-	tableName := makeMessageTableName()
 	limit := 10
 	infos, err := loadMessageBatch(1, 15, limit, tableName)
 	if err != nil {

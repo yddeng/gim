@@ -18,6 +18,7 @@ type Config struct {
 	} `toml:"DBConfig"`
 	LogConfig struct {
 		Path         string `toml:"Path"`
+		Filename     string `toml:"Filename"`
 		Debug        bool   `toml:"Debug"`
 		MaxSize      int    `toml:"MaxSize"`
 		EnableStdout bool   `toml:"EnableStdout"`
