@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol/pb"
@@ -22,21 +23,20 @@ func GetConversation(convID int64) *Conversation {
 type Conversation struct {
 	Type          pb.ConversationType // 对话类型
 	ID            int64               // 全局唯一ID
-	Name          string              // 会话名
 	Creator       string              // 对话创建者
 	CreateAt      int64               // 创建时间戳 秒
+	Extra         map[string]string   // 附加属性
 	LastMessageAt int64               // 最后一条消息的时间
 	LastMessageID int64               // 最后一条消息的ID
 	LastMessage   *pb.MessageInfo     // 最后一条消息
 	Message       []*pb.MessageInfo
-	Members       map[string]int // id -> role
+	Members       map[string]*CMember
 }
 
 func (this *Conversation) Pack() *pb.Conversation {
 	c := &pb.Conversation{
 		Type:          this.Type,
 		ID:            this.ID,
-		Name:          this.Name,
 		LastMessageAt: this.LastMessageAt,
 		LastMessageID: this.LastMessageID,
 	}
@@ -55,24 +55,15 @@ func (this *Conversation) Broadcast(msg proto.Message, except ...string) {
 	}
 }
 
-func (this *Conversation) AddMember(ids []string) {
-	for _, id := range ids {
-		this.Members[id] = 0
+func (this *Conversation) AddMember(members []*CMember) {
+	for _, m := range members {
+		this.Members[m.UserID] = m
 	}
 }
 
-func (this *Conversation) RemoveMember(ids []string) {
-	//f := func(s string, m *[]string) {
-	//	for i, v := range *m {
-	//		if v == s {
-	//			*m = append((*m)[:i], (*m)[i+1:]...)
-	//			break
-	//		}
-	//	}
-	//}
-
-	for _, id := range ids {
-		delete(this.Members, id)
+func (this *Conversation) RemoveMember(members []*CMember) {
+	for _, m := range members {
+		delete(this.Members, m.UserID)
 	}
 }
 
@@ -83,17 +74,18 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 	nowUnix := time.Now().Unix()
 	c := &Conversation{
 		Type:     pb.ConversationType_Normal,
-		Name:     req.GetName(),
 		Creator:  u.ID,
+		Extra:    req.GetExtra(),
 		CreateAt: nowUnix,
-		Members:  make(map[string]int, 16),
+		Members:  make(map[string]*CMember, 16),
 	}
 
-	c.Members[u.ID] = 1
+	members := make([]*CMember, 0, len(req.GetMembers())+1)
+	members = append(members, &CMember{UserID: u.ID, CreateAt: nowUnix, Role: 1})
 	for _, id := range req.GetMembers() {
 		if u2 := user.GetUser(id); u2 != nil {
 			if u.ID != id {
-				c.Members[id] = 0
+				members = append(members, &CMember{UserID: id, CreateAt: nowUnix, Role: 0})
 			}
 		}
 	}
@@ -112,8 +104,12 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 		})
 		return
 	}
+	for _, m := range c.Members {
+		m.ConvID = c.ID
+		m.ID = fmt.Sprintf("%d_%s", m.ConvID, m.UserID)
+	}
 
-	if err := setNxConvUser(c.ID, c.Members); err != nil {
+	if err := setNxConvUser(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
 			Code: pb.ErrCode_Error,
@@ -121,6 +117,7 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 		return
 	}
 
+	c.AddMember(members)
 	convMap[c.ID] = c
 
 	conv := c.Pack()

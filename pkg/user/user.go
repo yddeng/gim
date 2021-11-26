@@ -10,31 +10,12 @@ import (
 	"time"
 )
 
-var (
-	userMap = map[string]*User{}
-)
-
-func GetUser(id string) *User {
-	u, ok := userMap[id]
-	if !ok {
-		var err error
-		u, err = loadUser(id)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		if u != nil {
-			userMap[id] = u
-		}
-	}
-	return u
-}
-
 type User struct {
 	ID       string
 	CreateAt int64
 	UpdateAt int64
 	Extra    map[string]string // 附加属性
+	Convs    map[int64]int     // 会话列表
 	sess     dnet.Session
 }
 

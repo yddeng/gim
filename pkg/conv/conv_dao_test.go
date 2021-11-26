@@ -20,7 +20,6 @@ func TestConversation(t *testing.T) {
 	conv := &Conversation{
 		Type:     pb.ConversationType_Normal,
 		ID:       0,
-		Name:     "test",
 		Creator:  "ydd",
 		CreateAt: time.Now().Unix(),
 	}
@@ -30,13 +29,12 @@ func TestConversation(t *testing.T) {
 	}
 	t.Log(conv.ID)
 
-	conv2, err := loadConversation(2)
+	conv2, err := selectConversation(2)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(conv2)
 
-	conv.Name = "test2"
 	conv.LastMessageID = 1
 	conv.LastMessageAt = time.Now().Unix()
 	if err := updateConversation(conv); err != nil {
@@ -50,9 +48,17 @@ func TestConvUser(t *testing.T) {
 	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
 
 	convID := int64(1)
-	users := map[string]int{"ydd": 1, "ydd2": 0}
+	users := []*CMember{{
+		ID:       "1_ydd",
+		ConvID:   convID,
+		UserID:   "ydd",
+		Nickname: "ydd",
+		CreateAt: time.Now().Unix(),
+		Mute:     1,
+		Role:     0,
+	}}
 
-	if err := setNxConvUser(convID, users); err != nil {
+	if err := setNxConvUser(users); err != nil {
 		t.Error(err)
 	}
 
@@ -68,7 +74,7 @@ func TestConvUser(t *testing.T) {
 	}
 	t.Log(user)
 
-	if err := delConvUser(convID, []string{"ydd", "ydd2"}); err != nil {
+	if err := delConvUser(users); err != nil {
 		t.Error(err)
 	}
 }

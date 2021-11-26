@@ -1,11 +1,13 @@
 package conv
 
 import (
+	"fmt"
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/gim/pkg/gate"
 	"github.com/yddeng/gim/pkg/user"
 	"github.com/yddeng/utils/log"
+	"time"
 )
 
 func onAddMember(u *user.User, msg *codec.Message) {
@@ -23,34 +25,40 @@ func onAddMember(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	var idsMap = make(map[string]int, len(req.GetAddIds()))
-	var addIds = make([]string, 0, len(req.GetAddIds()))
+	nowUnix := time.Now().Unix()
+	members := make([]*CMember, 0, len(req.GetAddIds()))
+	addIds := make([]string, 0, len(req.GetAddIds()))
 	for _, id := range req.GetAddIds() {
 		if _, exist := c.Members[id]; !exist {
 			// load 数据库
 			if u2 := user.GetUser(id); u2 != nil {
-				idsMap[id] = 0
+				members = append(members, &CMember{
+					ID:       fmt.Sprintf("%d_%s", c.ID, id),
+					ConvID:   c.ID,
+					UserID:   id,
+					CreateAt: nowUnix,
+				})
 				addIds = append(addIds, id)
 			}
 		}
 	}
 
-	if len(addIds) == 0 {
+	if len(members) == 0 {
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK})
 		return
 	}
 
-	if err := setNxConvUser(c.ID, idsMap); err != nil {
+	if err := setNxConvUser(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.AddMember(addIds)
+	c.AddMember(members)
 
 	conv := c.Pack()
-	for id := range idsMap {
-		if u2 := user.GetUser(id); u2 != nil {
+	for _, m := range members {
+		if u2 := user.GetUser(m.UserID); u2 != nil {
 			u2.SendToClient(0, &pb.NotifyInvited{
 				Conv:   conv,
 				InitBy: u.ID,
@@ -83,18 +91,20 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if role, inConv := c.Members[u.ID]; !inConv {
+	if m, inConv := c.Members[u.ID]; !inConv {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotInConversation})
 		return
-	} else if role != 1 {
+	} else if m.Role != 1 {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotHasPermission})
 		return
 	}
 
-	var rmIds = make([]string, 0, len(req.GetRemoveIds()))
+	rmIds := make([]string, 0, len(req.GetRemoveIds()))
+	members := make([]*CMember, 0, len(req.GetRemoveIds()))
 	for _, id := range req.GetRemoveIds() {
-		if _, exist := c.Members[id]; exist {
+		if m, exist := c.Members[id]; exist {
 			rmIds = append(rmIds, id)
+			members = append(members, m)
 		}
 	}
 
@@ -103,17 +113,17 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if err := delConvUser(c.ID, rmIds); err != nil {
+	if err := delConvUser(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.RemoveMember(rmIds)
+	c.RemoveMember(members)
 
 	conv := c.Pack()
-	for _, id := range rmIds {
-		if u2 := user.GetUser(id); u2 != nil {
+	for _, m := range members {
+		if u2 := user.GetUser(m.UserID); u2 != nil {
 			u2.SendToClient(0, &pb.NotifyKicked{
 				Conv:     conv,
 				KickedBy: u.ID,
@@ -147,13 +157,20 @@ func onJoin(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if err := setNxConvUser(c.ID, map[string]int{u.ID: 0}); err != nil {
+	member := []*CMember{{
+		ID:       fmt.Sprintf("%d_%s", c.ID, u.ID),
+		ConvID:   c.ID,
+		UserID:   u.ID,
+		CreateAt: time.Now().Unix(),
+	}}
+
+	if err := setNxConvUser(member); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.AddMember([]string{u.ID})
+	c.AddMember(member)
 
 	// 通知给群里其他人
 	notifyJoined := &pb.NotifyMemberJoined{
@@ -181,13 +198,14 @@ func onQuit(u *user.User, msg *codec.Message) {
 		return
 	}
 
-	if err := delConvUser(c.ID, []string{u.ID}); err != nil {
+	member := []*CMember{c.Members[u.ID]}
+	if err := delConvUser(member); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.RemoveMember([]string{u.ID})
+	c.RemoveMember(member)
 
 	// 通知给群里其他人
 	notifyMemberLeft := &pb.NotifyMemberLeft{

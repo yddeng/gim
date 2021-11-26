@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/gim/internal/db"
@@ -10,7 +11,7 @@ import (
 	"time"
 )
 
-func loadConversation(id uint64) (*Conversation, error) {
+func selectConversation(id uint64) (*Conversation, error) {
 	sqlStr := `
 SELECT * FROM "conversation_list" 
 WHERE id = '%d';`
@@ -18,7 +19,6 @@ WHERE id = '%d';`
 	sqlStatement := fmt.Sprintf(sqlStr, id)
 	log.Debug(sqlStatement)
 
-	var conv Conversation
 	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
@@ -29,58 +29,64 @@ WHERE id = '%d';`
 		return nil, nil
 	}
 
+	var conv Conversation
+	var extra []byte
 	if err := rows.Scan(
 		&conv.ID,
 		&conv.Type,
-		&conv.Name,
 		&conv.Creator,
 		&conv.CreateAt,
+		&extra,
 		&conv.LastMessageID,
 		&conv.LastMessageAt); err != nil {
 		return nil, err
 	}
 
+	_ = json.Unmarshal(extra, &conv.Extra)
 	return &conv, nil
 }
 
 func insertConversation(conv *Conversation) error {
 	sqlStatement := `
-INSERT INTO "conversation_list" (type,name,creator,create_at)  
+INSERT INTO "conversation_list" (type,creator,create_at,extra)  
 VALUES ($1,$2,$3,$4)
 RETURNING id;`
 
+	extra, _ := json.Marshal(conv.Extra)
 	return db.SqlDB.QueryRow(sqlStatement,
 		int32(conv.Type),
-		conv.Name,
 		conv.Creator,
-		conv.CreateAt).Scan(&conv.ID)
+		conv.CreateAt,
+		extra).Scan(&conv.ID)
 }
 
 func updateConversation(conv *Conversation) error {
 	sqlStr := `
 UPDATE "conversation_list" 
-SET name = $1, last_message_id = $2, last_message_at = $3
+SET extra = $1, last_message_id = $2, last_message_at = $3
 WHERE id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, conv.ID)
-	_, err := db.SqlDB.Exec(sqlStatement, conv.Name, conv.LastMessageID, conv.LastMessageAt)
+	extra, _ := json.Marshal(conv.Extra)
+	_, err := db.SqlDB.Exec(sqlStatement, extra, conv.LastMessageID, conv.LastMessageAt)
 	return err
 }
 
 /*  -- ----------------------------
--- conv_user
+-- conv_member
 -- ---------------------------- */
 
-func setNxConvUser(convID int64, users map[string]int) error {
+func setNxConvUser(cmember []*CMember) error {
 	sqlStr := `
-INSERT INTO "conv_user" (id, conv_id, user_id, role)
+INSERT INTO "conv_member" (id, conv_id, user_id, nickname, create_at, mute, role)
 VALUES %s
 ON conflict(id) DO 
-UPDATE SET conv_id = excluded.conv_id, user_id = excluded.user_id, role = excluded.role ;`
+UPDATE SET nickname = excluded.nickname, mute = excluded.mute, role = excluded.role ;`
 
-	values := make([]string, 0, len(users))
-	for uid, role := range users {
-		values = append(values, fmt.Sprintf("('%d_%s',%d,'%s',%d)", convID, uid, convID, uid, role))
+	values := make([]string, 0, len(cmember))
+	for _, v := range cmember {
+		values = append(values, fmt.Sprintf("('%s',%d,'%s','%s',%d,%d,%d)",
+			v.ID, v.ConvID, v.UserID, v.Nickname, v.CreateAt, v.Mute, v.Role))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(values, ","))
@@ -89,14 +95,14 @@ UPDATE SET conv_id = excluded.conv_id, user_id = excluded.user_id, role = exclud
 	return err
 }
 
-func delConvUser(convID int64, users []string) error {
+func delConvUser(cmember []*CMember) error {
 	sqlStr := `
-DELETE FROM "conv_user" 
+DELETE FROM "conv_member" 
 WHERE %s;`
 
-	keys := make([]string, 0, len(users))
-	for _, uid := range users {
-		keys = append(keys, fmt.Sprintf("id = '%d_%s'", convID, uid))
+	keys := make([]string, 0, len(cmember))
+	for _, v := range cmember {
+		keys = append(keys, fmt.Sprintf("id = '%s'", v.ID))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(keys, " OR "))
@@ -105,9 +111,9 @@ WHERE %s;`
 	return err
 }
 
-func getUserConversations(userID string) (map[int64]int, error) {
+func getUserConversations(userID string) (map[int64]*CMember, error) {
 	sqlStr := `
-SELECT conv_id, role FROM "conv_user" 
+SELECT * FROM "conv_member" 
 WHERE user_id = '%s';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, userID)
@@ -118,23 +124,28 @@ WHERE user_id = '%s';`
 		return nil, err
 	}
 
-	convs := map[int64]int{}
+	convs := map[int64]*CMember{}
 	defer rows.Close()
 	for rows.Next() {
-		var convID int64
-		var role int
-		err = rows.Scan(&convID, &role)
-		if err != nil {
+		var cm CMember
+		if err = rows.Scan(
+			&cm.ID,
+			&cm.ConvID,
+			&cm.UserID,
+			&cm.Nickname,
+			&cm.CreateAt,
+			&cm.Mute,
+			&cm.Role); err != nil {
 			return nil, err
 		}
-		convs[convID] = role
+		convs[cm.ConvID] = &cm
 	}
 	return convs, nil
 }
 
-func getConversationUsers(convID int64) (map[string]int, error) {
+func getConversationUsers(convID int64) (map[string]*CMember, error) {
 	sqlStr := `
-SELECT user_id, role FROM "conv_user" 
+SELECT * FROM "conv_member" 
 WHERE conv_id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, convID)
@@ -145,16 +156,21 @@ WHERE conv_id = '%d';`
 		return nil, err
 	}
 
-	users := map[string]int{}
+	users := map[string]*CMember{}
 	defer rows.Close()
 	for rows.Next() {
-		var userID string
-		var role int
-		err = rows.Scan(&userID, &role)
-		if err != nil {
+		var cm CMember
+		if err = rows.Scan(
+			&cm.ID,
+			&cm.ConvID,
+			&cm.UserID,
+			&cm.Nickname,
+			&cm.CreateAt,
+			&cm.Mute,
+			&cm.Role); err != nil {
 			return nil, err
 		}
-		users[userID] = role
+		users[cm.UserID] = &cm
 	}
 	return users, nil
 }
