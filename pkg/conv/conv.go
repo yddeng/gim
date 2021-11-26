@@ -69,7 +69,7 @@ func (this *Conversation) RemoveMember(members []*CMember) {
 
 func onCreateConversation(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.CreateConversationReq)
-	log.Debugf("onCreateConversation %v", req)
+	log.Debugf("user(%s) onCreateConversation %v", u.ID, req)
 
 	nowUnix := time.Now().Unix()
 	c := &Conversation{
@@ -90,7 +90,7 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 		}
 	}
 
-	if len(c.Members) < 2 {
+	if len(members) < 2 {
 		u.SendToClient(msg.GetSeq(), &pb.CreateConversationResp{
 			Code: pb.ErrCode_RequestArgumentErr,
 		})
@@ -104,7 +104,7 @@ func onCreateConversation(u *user.User, msg *codec.Message) {
 		})
 		return
 	}
-	for _, m := range c.Members {
+	for _, m := range members {
 		m.ConvID = c.ID
 		m.ID = fmt.Sprintf("%d_%s", m.ConvID, m.UserID)
 	}

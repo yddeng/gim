@@ -20,7 +20,7 @@ func InitMessageTable() {
 
 func onSendMessage(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.SendMessageReq)
-	log.Debugf("onSendMessage %v", req)
+	log.Debugf("user(%s) onSendMessage %v", u.ID, req)
 
 	c := GetConversation(req.GetConvID())
 	if c == nil {

@@ -12,7 +12,7 @@ import (
 
 func onAddMember(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.AddMemberReq)
-	log.Debugf("onAddMember %v", req)
+	log.Debugf("user(%s) onAddMember %v", u.ID, req)
 
 	c := GetConversation(req.GetConvID())
 	if c == nil {
@@ -78,7 +78,7 @@ func onAddMember(u *user.User, msg *codec.Message) {
 
 func onRemoveMember(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.RemoveMemberReq)
-	log.Debugf("onRemoveMember %v", req)
+	log.Debugf("user(%s) onRemoveMember %v", u.ID, req)
 
 	if len(req.GetRemoveIds()) == 0 {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_RequestArgumentErr})
@@ -108,7 +108,7 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 		}
 	}
 
-	if len(rmIds) == 0 {
+	if len(members) == 0 {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_OK})
 		return
 	}
@@ -143,7 +143,7 @@ func onRemoveMember(u *user.User, msg *codec.Message) {
 
 func onJoin(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.JoinReq)
-	log.Debugf("onJoin %v", req)
+	log.Debugf("user(%s) onJoin %v", u.ID, req)
 
 	c := GetConversation(req.GetConvID())
 	if c == nil {
@@ -184,7 +184,7 @@ func onJoin(u *user.User, msg *codec.Message) {
 
 func onQuit(u *user.User, msg *codec.Message) {
 	req := msg.GetData().(*pb.QuitReq)
-	log.Debugf("onQuit %v", req)
+	log.Debugf("user(%s) onQuit %v", u.ID, req)
 
 	c := GetConversation(req.GetConvID())
 	if c == nil {
