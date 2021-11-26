@@ -2,10 +2,8 @@ package main
 
 import (
 	"github.com/yddeng/gim/config"
+	"github.com/yddeng/gim/im"
 	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/pkg/conv"
-	_ "github.com/yddeng/gim/pkg/conv"
-	"github.com/yddeng/gim/pkg/gate"
 	"github.com/yddeng/utils/log"
 	"os"
 )
@@ -37,10 +35,10 @@ func main() {
 	}
 
 	go func() {
-		gate.StartTCPGateway("127.0.0.1:43210")
+		im.StartTCPGateway("127.0.0.1:43210")
 	}()
 
-	conv.InitMessageTable()
+	im.InitMessageTable()
 
 	select {}
 }

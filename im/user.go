@@ -1,11 +1,60 @@
-package user
+package im
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/yddeng/dnet"
+	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/db"
 	"github.com/yddeng/utils/log"
+	"github.com/yddeng/utils/lru"
 )
+
+var userCache *lru.Cache = lru.New(5000)
+
+type cacheUser struct {
+	u *User
+}
+
+func GetUser(id string) *User {
+	v, ok := userCache.Get(id)
+	if ok {
+		u := v.(*cacheUser)
+		return u.u
+	}
+
+	u, err := loadUser(id)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+
+	userCache.Add(id, &cacheUser{u: u})
+	return u
+}
+
+func addUser(u *User) {
+	userCache.Add(u.ID, &cacheUser{u: u})
+}
+
+type User struct {
+	ID       string
+	CreateAt int64
+	UpdateAt int64
+	Extra    map[string]string // 附加属性
+	Convs    map[int64]*Member // 会话列表
+	sess     dnet.Session
+}
+
+func (this *User) SendToClient(seq uint32, msg proto.Message) {
+	if this.sess == nil {
+		return
+	}
+	if err := this.sess.Send(codec.NewMessage(seq, msg)); err != nil {
+		this.sess.Close(err)
+	}
+}
 
 func loadUser(key string) (*User, error) {
 	sqlStr := `

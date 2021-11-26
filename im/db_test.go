@@ -1,4 +1,4 @@
-package conv
+package im
 
 import (
 	"fmt"
@@ -10,13 +10,31 @@ import (
 )
 
 func init() {
-	config.LoadConfig("../../config/config.toml")
+	conf := config.LoadConfig("../../config/config.toml")
+	dbConfig := conf.DBConfig
+	db.Open(dbConfig.SqlType, dbConfig.Host, dbConfig.Port, dbConfig.Database, dbConfig.User, dbConfig.Password)
+}
+
+func TestUser(t *testing.T) {
+	u := &User{
+		ID:       "ydd",
+		CreateAt: time.Now().Unix(),
+		UpdateAt: time.Now().Unix(),
+		Extra:    map[string]string{"name": "ydd", "age": "24"},
+	}
+
+	if err := setNxUser(u); err != nil {
+		t.Error(err)
+	}
+
+	u, err := loadUser("ydd")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(u)
 }
 
 func TestConversation(t *testing.T) {
-	conf := config.GetConfig().DBConfig
-	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
-
 	conv := &Conversation{
 		Type:     pb.ConversationType_Normal,
 		ID:       0,
@@ -29,7 +47,7 @@ func TestConversation(t *testing.T) {
 	}
 	t.Log(conv.ID)
 
-	conv2, err := selectConversation(2)
+	conv2, err := loadConversation(2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -43,12 +61,9 @@ func TestConversation(t *testing.T) {
 
 }
 
-func TestConvUser(t *testing.T) {
-	conf := config.GetConfig().DBConfig
-	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
-
+func TestMember(t *testing.T) {
 	convID := int64(1)
-	users := []*CMember{{
+	members := []*Member{{
 		ID:       "1_ydd",
 		ConvID:   convID,
 		UserID:   "ydd",
@@ -58,7 +73,7 @@ func TestConvUser(t *testing.T) {
 		Role:     0,
 	}}
 
-	if err := setNxConvUser(users); err != nil {
+	if err := setNxConvUser(members); err != nil {
 		t.Error(err)
 	}
 
@@ -74,7 +89,7 @@ func TestConvUser(t *testing.T) {
 	}
 	t.Log(user)
 
-	if err := delConvUser(users); err != nil {
+	if err := delConvUser(members); err != nil {
 		t.Error(err)
 	}
 }
@@ -84,9 +99,6 @@ func TestDate(t *testing.T) {
 }
 
 func TestMessage(t *testing.T) {
-	conf := config.GetConfig().DBConfig
-	db.Open(conf.SqlType, conf.Host, conf.Port, conf.Database, conf.User, conf.Password)
-
 	msg := &pb.MessageInfo{
 		Msg: &pb.Message{
 			Text: "hello world",

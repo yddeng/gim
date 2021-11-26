@@ -1,8 +1,7 @@
-package user
+package im
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/gim/internal/codec"
 	"github.com/yddeng/gim/internal/protocol/pb"
@@ -10,27 +9,7 @@ import (
 	"time"
 )
 
-type User struct {
-	ID       string
-	CreateAt int64
-	UpdateAt int64
-	Extra    map[string]string // 附加属性
-	Convs    map[int64]int     // 会话列表
-	sess     dnet.Session
-}
-
-func (this *User) SendToClient(seq uint32, msg proto.Message) {
-	disposeHook(this, msg)
-
-	if this.sess == nil {
-		return
-	}
-	if err := this.sess.Send(codec.NewMessage(seq, msg)); err != nil {
-		this.sess.Close(err)
-	}
-}
-
-func OnUserLogin(sess dnet.Session, msg *codec.Message) {
+func onUserLogin(sess dnet.Session, msg *codec.Message) {
 	log.Infof("onUserLogin %v", msg)
 	req := msg.GetData().(*pb.UserLoginReq)
 
@@ -66,20 +45,18 @@ func OnUserLogin(sess dnet.Session, msg *codec.Message) {
 		return
 	}
 
-	userMap[id] = u
+	addUser(u)
 	sess.SetContext(u)
 
 	u.SendToClient(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_OK})
 }
 
-func OnClose(session dnet.Session, err error) {
+func onSessionClose(session dnet.Session, err error) {
 	ctx := session.Context()
 	if ctx != nil {
 		u := ctx.(*User)
 		log.Infof("onClose user(%s) %s. ", u.ID, err)
 		u.sess.SetContext(nil)
 		u.sess = nil
-		delete(userMap, u.ID)
-		_ = setNxUser(u)
 	}
 }
