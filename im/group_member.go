@@ -9,7 +9,7 @@ import (
 
 type Member struct {
 	ID       string
-	ConvID   int64
+	GroupID  int64
 	UserID   string
 	Nickname string
 	CreateAt int64
@@ -17,9 +17,9 @@ type Member struct {
 	Role     int // 会话角色
 }
 
-func setNxConvUser(cmember []*Member) error {
+func setNxGroupMember(cmember []*Member) error {
 	sqlStr := `
-INSERT INTO "conv_member" (id, conv_id, user_id, nickname, create_at, mute, role)
+INSERT INTO "group_member" (id, group_id, user_id, nickname, create_at, mute, role)
 VALUES %s
 ON conflict(id) DO 
 UPDATE SET nickname = excluded.nickname, mute = excluded.mute, role = excluded.role ;`
@@ -27,7 +27,7 @@ UPDATE SET nickname = excluded.nickname, mute = excluded.mute, role = excluded.r
 	values := make([]string, 0, len(cmember))
 	for _, v := range cmember {
 		values = append(values, fmt.Sprintf("('%s',%d,'%s','%s',%d,%d,%d)",
-			v.ID, v.ConvID, v.UserID, v.Nickname, v.CreateAt, v.Mute, v.Role))
+			v.ID, v.GroupID, v.UserID, v.Nickname, v.CreateAt, v.Mute, v.Role))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(values, ","))
@@ -36,9 +36,9 @@ UPDATE SET nickname = excluded.nickname, mute = excluded.mute, role = excluded.r
 	return err
 }
 
-func delConvUser(cmember []*Member) error {
+func delGroupMember(cmember []*Member) error {
 	sqlStr := `
-DELETE FROM "conv_member" 
+DELETE FROM "group_member" 
 WHERE %s;`
 
 	keys := make([]string, 0, len(cmember))
@@ -52,9 +52,9 @@ WHERE %s;`
 	return err
 }
 
-func getUserConversations(userID string) (map[int64]*Member, error) {
+func getUserGroups(userID string) (map[int64]*Member, error) {
 	sqlStr := `
-SELECT * FROM "conv_member" 
+SELECT * FROM "group_member" 
 WHERE user_id = '%s';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, userID)
@@ -65,13 +65,13 @@ WHERE user_id = '%s';`
 		return nil, err
 	}
 
-	convs := map[int64]*Member{}
+	groups := map[int64]*Member{}
 	defer rows.Close()
 	for rows.Next() {
 		var cm Member
 		if err = rows.Scan(
 			&cm.ID,
-			&cm.ConvID,
+			&cm.GroupID,
 			&cm.UserID,
 			&cm.Nickname,
 			&cm.CreateAt,
@@ -79,17 +79,17 @@ WHERE user_id = '%s';`
 			&cm.Role); err != nil {
 			return nil, err
 		}
-		convs[cm.ConvID] = &cm
+		groups[cm.GroupID] = &cm
 	}
-	return convs, nil
+	return groups, nil
 }
 
-func getConversationUsers(convID int64) (map[string]*Member, error) {
+func getGroupUsers(groupID int64) (map[string]*Member, error) {
 	sqlStr := `
-SELECT * FROM "conv_member" 
-WHERE conv_id = '%d';`
+SELECT * FROM "group_member" 
+WHERE group_id = '%d';`
 
-	sqlStatement := fmt.Sprintf(sqlStr, convID)
+	sqlStatement := fmt.Sprintf(sqlStr, groupID)
 	log.Debug(sqlStatement)
 
 	rows, err := db.SqlDB.Query(sqlStatement)
@@ -103,7 +103,7 @@ WHERE conv_id = '%d';`
 		var cm Member
 		if err = rows.Scan(
 			&cm.ID,
-			&cm.ConvID,
+			&cm.GroupID,
 			&cm.UserID,
 			&cm.Nickname,
 			&cm.CreateAt,

@@ -55,8 +55,8 @@ func main() {
 	registerHandler(pb.CmdType_CmdUserLoginResp, func(session dnet.Session, msg *codec.Message) {
 		log.Debugf("UserLoginResp %v", msg.GetData().(*pb.UserLoginResp))
 	})
-	registerHandler(pb.CmdType_CmdCreateConversationResp, func(session dnet.Session, msg *codec.Message) {
-		log.Debugf("CreateConversationResp %v", msg.GetData().(*pb.CreateConversationResp))
+	registerHandler(pb.CmdType_CmdCreateGroupResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("CreateGroupResp %v", msg.GetData().(*pb.CreateGroupResp))
 	})
 	registerHandler(pb.CmdType_CmdAddMemberResp, func(session dnet.Session, msg *codec.Message) {
 		log.Debugf("AddMemberResp %v", msg.GetData().(*pb.AddMemberResp))
@@ -98,17 +98,17 @@ func main() {
 }
 
 func cmd(sess dnet.Session) {
-	fmt.Println("1:createConversation 2:addMember 3:removeMember 4:join 5:quit 6:send")
+	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send")
 	fmt.Printf("==>")
 	var k int
 	fmt.Scan(&k)
 	switch k {
 	case 1:
-		fmt.Printf("CreateConversation users:")
+		fmt.Printf("CreateGroup users:")
 		var users string
 		fmt.Scan(&users)
 		us := strings.Split(users, "&")
-		_ = sess.Send(codec.NewMessage(0, &pb.CreateConversationReq{
+		_ = sess.Send(codec.NewMessage(0, &pb.CreateGroupReq{
 			Members: us,
 		}))
 	case 2:
@@ -118,8 +118,8 @@ func cmd(sess dnet.Session) {
 		fmt.Scan(&id, &users)
 		us := strings.Split(users, "&")
 		_ = sess.Send(codec.NewMessage(0, &pb.AddMemberReq{
-			ConvID: int64(id),
-			AddIds: us,
+			GroupID: int64(id),
+			AddIds:  us,
 		}))
 	case 3:
 		fmt.Printf("RemoveMember id,users :")
@@ -128,7 +128,7 @@ func cmd(sess dnet.Session) {
 		fmt.Scan(&id, &users)
 		us := strings.Split(users, "&")
 		_ = sess.Send(codec.NewMessage(0, &pb.RemoveMemberReq{
-			ConvID:    int64(id),
+			GroupID:   int64(id),
 			RemoveIds: us,
 		}))
 	case 4:
@@ -136,14 +136,14 @@ func cmd(sess dnet.Session) {
 		var id int
 		fmt.Scan(&id)
 		_ = sess.Send(codec.NewMessage(0, &pb.JoinReq{
-			ConvID: int64(id),
+			GroupID: int64(id),
 		}))
 	case 5:
 		fmt.Printf("Quit id :")
 		var id int
 		fmt.Scan(&id)
 		_ = sess.Send(codec.NewMessage(0, &pb.QuitReq{
-			ConvID: int64(id),
+			GroupID: int64(id),
 		}))
 	case 6:
 		fmt.Printf("Send id,msg:")
@@ -151,8 +151,8 @@ func cmd(sess dnet.Session) {
 		var msg string
 		fmt.Scan(&id, &msg)
 		_ = sess.Send(codec.NewMessage(0, &pb.SendMessageReq{
-			ConvID: int64(id),
-			Msg:    &pb.Message{Text: msg},
+			GroupID: int64(id),
+			Msg:     &pb.Message{Text: msg},
 		}))
 	}
 }

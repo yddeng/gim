@@ -7,8 +7,8 @@ CREATE TABLE "users" (
 PRIMARY KEY ("id")
 );
 
-DROP TABLE IF EXISTS "conversation_list";
-CREATE TABLE "conversation_list" (
+DROP TABLE IF EXISTS "groups";
+CREATE TABLE "groups" (
     "id"               SERIAL8,
     "type"             int4 NOT NULL ,
     "creator"          varchar(255) NOT NULL ,
@@ -19,10 +19,10 @@ CREATE TABLE "conversation_list" (
     PRIMARY KEY ("id")
 );
 
-DROP TABLE IF EXISTS "conv_member";
-CREATE TABLE "conv_member" (
-    "id"               varchar(255) NOT NULL,     /* 组合建 conversation_id_user_id */
-    "conv_id"          int8 NOT NULL,             /* 会话ID */
+DROP TABLE IF EXISTS "group_member";
+CREATE TABLE "group_member" (
+    "id"               varchar(255) NOT NULL,     /* 组合建 group_id_user_id */
+    "group_id"          int8 NOT NULL,             /* 会话ID */
     "user_id"          varchar(255) NOT NULL ,    /* 用户ID */
     "nickname"         varchar(255) ,             /* 群内昵称 */
     "create_at"        int8 NOT NULL,             /* 入群时间,单位：秒 */
@@ -35,8 +35,8 @@ CREATE TABLE "conv_member" (
 /*
 DROP TABLE IF EXISTS "message_2021125";
 CREATE TABLE "message_2021125" (
-    "id"           varchar(255) NOT NULL, /* 组合建 conv_id_message_id */
-    "conv_id"      int8 NOT NULL ,
+    "id"           varchar(255) NOT NULL, /* 组合建 group_id_message_id */
+    "group_id"      int8 NOT NULL ,
     "message_id"   int8 NOT NULL,
     "message"      bytea NOT NULL,
     PRIMARY KEY ("id")

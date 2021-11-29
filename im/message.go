@@ -11,15 +11,6 @@ import (
 )
 
 var (
-	createMessageTableStr = `DROP TABLE IF EXISTS "%s";
-CREATE TABLE "%s" (
-    "id"           varchar(255) NOT NULL,
-    "conv_id"      int8 NOT NULL ,
-    "message_id"   int8 NOT NULL,
-    "message"      bytea NOT NULL,
-    PRIMARY KEY ("id")
-);`
-
 	tableName string
 )
 
@@ -54,26 +45,34 @@ select count(*) from "%s";`
 }
 
 func createMessageTable(tableName string) error {
-	sqlStatement := fmt.Sprintf(createMessageTableStr, tableName, tableName)
+	sqlStr := `DROP TABLE IF EXISTS "%s";
+CREATE TABLE "%s" (
+    "id"           varchar(255) NOT NULL,
+    "group_id"      int8 NOT NULL ,
+    "message_id"   int8 NOT NULL,
+    "message"      bytea NOT NULL,
+    PRIMARY KEY ("id")
+);`
+	sqlStatement := fmt.Sprintf(sqlStr, tableName, tableName)
 	_, err := db.SqlDB.Exec(sqlStatement)
 	return err
 }
 
-func setNxMessage(convID int64, msg *pb.MessageInfo, tableName string) error {
+func setNxMessage(groupID int64, msg *pb.MessageInfo, tableName string) error {
 	sqlStr := `
-INSERT INTO "%s" (id,conv_id,message_id,message)  
+INSERT INTO "%s" (id,group_id,message_id,message)  
 VALUES ($1,$2,$3,$4)
 ON conflict(id) DO 
 UPDATE SET message = $4;`
 
 	sqlStatement := fmt.Sprintf(sqlStr, tableName)
-	id := fmt.Sprintf("%d_%d", convID, msg.GetMsgID())
+	id := fmt.Sprintf("%d_%d", groupID, msg.GetMsgID())
 	data, _ := proto.Marshal(msg)
-	_, err := db.SqlDB.Exec(sqlStatement, id, convID, msg.GetMsgID(), data)
+	_, err := db.SqlDB.Exec(sqlStatement, id, groupID, msg.GetMsgID(), data)
 	return err
 }
 
-func loadMessageBatch(convID int64, start, limit int, tableName string) ([]*pb.MessageInfo, error) {
+func loadMessageBatch(groupID int64, start, limit int, tableName string) ([]*pb.MessageInfo, error) {
 	sqlStr := `
 SELECT message FROM "%s" 
 WHERE %s;`
@@ -81,7 +80,7 @@ WHERE %s;`
 	keys := make([]string, 0, limit)
 	for i := 0; i < limit; i++ {
 		seq := start + i
-		keys = append(keys, fmt.Sprintf("id = '%d_%d'", convID, seq))
+		keys = append(keys, fmt.Sprintf("id = '%d_%d'", groupID, seq))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, strings.Join(keys, " OR "))

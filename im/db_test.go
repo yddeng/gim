@@ -34,20 +34,20 @@ func TestUser(t *testing.T) {
 	t.Log(u)
 }
 
-func TestConversation(t *testing.T) {
-	conv := &Conversation{
-		Type:     pb.ConversationType_Normal,
+func TestGroup(t *testing.T) {
+	conv := &Group{
+		Type:     pb.GroupType_Normal,
 		ID:       0,
 		Creator:  "ydd",
 		CreateAt: time.Now().Unix(),
 	}
 
-	if err := insertConversation(conv); err != nil {
+	if err := insertGroup(conv); err != nil {
 		t.Error(err)
 	}
 	t.Log(conv.ID)
 
-	conv2, err := loadConversation(2)
+	conv2, err := loadGroup(2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,7 +55,7 @@ func TestConversation(t *testing.T) {
 
 	conv.LastMessageID = 1
 	conv.LastMessageAt = time.Now().Unix()
-	if err := updateConversation(conv); err != nil {
+	if err := updateGroup(conv); err != nil {
 		t.Error(err)
 	}
 
@@ -77,13 +77,13 @@ func TestMember(t *testing.T) {
 		t.Error(err)
 	}
 
-	convs, err := getUserConversations("ydd")
+	convs, err := getUserGroups("ydd")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(convs)
 
-	user, err := getConversationUsers(convID)
+	user, err := getGroupUsers(convID)
 	if err != nil {
 		t.Error(err)
 	}

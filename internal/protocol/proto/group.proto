@@ -4,14 +4,14 @@ option go_package = "pb";
 import "errcode.proto";
 import "user.proto";
 
-enum ConversationType{
+enum GroupType{
     Normal    = 0; // 普通会话类型 单聊、群聊
     Transient = 1; // 临时会话
     ChatRoom  = 2; // 聊天室
 }
 
-message Conversation{
-    ConversationType type = 1;
+message Group{
+    GroupType type = 1;
     int64 ID   = 2;
     map<string,string> extra = 3; // 附加属性
     int64 lastMessageID = 4;      // 最后一条消息的ID
@@ -19,18 +19,18 @@ message Conversation{
 }
 
 // 创建对话
-message CreateConversationReq{
+message CreateGroupReq{
     repeated string members  = 1; // 必要参数，包含对话的初始成员列表，请注意当前用户作为对话的创建者，是默认包含在成员里面的，所以 members 数组中可以不包含当前用户。
     map<string,string> extra = 2; // 附加属性
 }
 
-message CreateConversationResp{
+message CreateGroupResp{
     ErrCode code = 1;
-    Conversation conv   = 2;
+    Group group   = 2;
 }
 
 message NotifyInvited{
-    Conversation conv   = 1;
+    Group group   = 1;
     string       initBy = 2; // 操作者
 }
 
@@ -48,22 +48,22 @@ message MessageInfo{
 }
 
 message SendMessageReq{
-    int64  convID = 1;
+    int64  groupID = 1;
     Message msg    = 2;
 }
 
 message SendMessageResp{
     ErrCode code = 1;
-    Conversation conv   = 2;
+    Group group   = 2;
 }
 
 message NotifyMessage{
-    Conversation conv     = 1;
+    Group group     = 1;
     repeated MessageInfo  msgInfos  = 2;
 }
 
 message AddMemberReq{
-    int64 convID = 1;
+    int64 groupID = 1;
     repeated string addIds = 2;
 }
 
@@ -72,13 +72,13 @@ message AddMemberResp{
 }
 
 message NotifyMemberJoined{
-    Conversation    conv     = 1;
+    Group    group     = 1;
     repeated string joinIds  = 2; // 加入的用户
     string          initBy   = 3; // 操作者
 }
 
 message RemoveMemberReq{
-    int64 convID = 1;
+    int64 groupID = 1;
     repeated string removeIds = 2;
 }
 
@@ -87,77 +87,77 @@ message RemoveMemberResp{
 }
 
 message NotifyMemberLeft{
-    Conversation    conv     = 1;
+    Group    group     = 1;
     repeated string leftIds  = 2; // 离开的用户
     string          kickedBy = 3; // 操作者
 }
 
 message NotifyKicked{
-    Conversation conv     = 1;
+    Group group     = 1;
     string       kickedBy = 2; // 操作者
 }
 
 message JoinReq{
-    int64 convID = 1;
+    int64 groupID = 1;
 }
 message JoinResp{
     ErrCode code = 1;
-    Conversation conv   = 2;
+    Group group   = 2;
 }
 
 // 主动
 message QuitReq{
-    int64 convID = 1;
+    int64 groupID = 1;
 }
 message QuitResp{
     ErrCode code = 1;
-    Conversation conv   = 2;
+    Group group   = 2;
 }
 
 // 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性
-message GetConversationUsersReq{
-    int64 convID = 1;
+message GetGroupUsersReq{
+    int64 groupID = 1;
 }
-message GetConversationUsersResp{
+message GetGroupUsersResp{
     ErrCode code = 1;
     repeated User users = 2;
 }
 
 // 解散会话
-message DissolveConversationReq{
-    int64 convID = 1;
+message DissolveGroupReq{
+    int64 groupID = 1;
 }
-message DissolveConversationResp{
+message DissolveGroupResp{
     ErrCode code = 1;
 }
 
-message NotifyDissolveConversation{
-    int64 convID = 1;
+message NotifyDissolveGroup{
+    int64 groupID = 1;
     string initBy = 2;
 }
 
 // 拉取列表
-message GetConversationListReq{}
-message GetConversationListResp{
+message GetGroupListReq{}
+message GetGroupListResp{
     ErrCode code = 1;
-    repeated Conversation convs = 2;
+    repeated Group groups = 2;
 }
 
 // 会话消息同步
 message SyncMessageReq{
-    int64 convID   = 1;
+    int64 groupID   = 1;
     int64 startID  = 2; // 开始请求的消息ID
     int32 limit    = 3; // 查询的消息数量，限制50条
     bool  oldToNew = 4; // 从旧到新、从新到旧
 }
 message SyncMessageResp{
     ErrCode code = 1;
-    Conversation conv   = 2;
+    Group group   = 2;
     repeated MessageInfo  msgInfos = 3;
 }
 
 message RecallMessageReq{
-    int64 convID = 1;
+    int64 groupID = 1;
     int64 msgID  = 2;
 }
 message RecallMessageResp{
@@ -165,6 +165,6 @@ message RecallMessageResp{
 }
 
 message NotifyRecallMessage{
-    Conversation conv  = 1;
+    Group group  = 1;
     MessageInfo  msg   = 2;
 }

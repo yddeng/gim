@@ -6,15 +6,15 @@ enum CmdType {
     CmdUserLoginReq = 1;
     CmdUserLoginResp = 2;
 
-    CmdCreateConversationReq  = 101;
-    CmdCreateConversationResp = 102;
-    CmdGetConversationUsersReq = 111;
-    CmdGetConversationUsersResp = 112;
-    CmdGetConversationListReq = 121;
-    CmdGetConversationListResp = 122;
-    CmdDissolveConversationReq = 123;
-    CmdDissolveConversationResp = 124;
-    CmdNotifyDissolveConversation = 125;
+    CmdCreateGroupReq  = 101;
+    CmdCreateGroupResp = 102;
+    CmdGetGroupUsersReq = 111;
+    CmdGetGroupUsersResp = 112;
+    CmdGetGroupListReq = 121;
+    CmdGetGroupListResp = 122;
+    CmdDissolveGroupReq = 123;
+    CmdDissolveGroupResp = 124;
+    CmdNotifyDissolveGroup = 125;
 
     CmdAddMemberReq = 201;
     CmdAddMemberResp = 202;
