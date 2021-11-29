@@ -46,7 +46,7 @@ func onCreateGroup(u *User, msg *codec.Message) {
 		m.ID = fmt.Sprintf("%d_%s", m.GroupID, m.UserID)
 	}
 
-	if err := setNxGroupMember(members); err != nil {
+	if err := dbSetNxGroupMember(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
 		return
@@ -95,6 +95,7 @@ func onAddMember(u *User, msg *codec.Message) {
 					GroupID:  c.ID,
 					UserID:   id,
 					CreateAt: nowUnix,
+					UpdateAt: nowUnix,
 				})
 				addIds = append(addIds, id)
 			}
@@ -106,7 +107,7 @@ func onAddMember(u *User, msg *codec.Message) {
 		return
 	}
 
-	if err := setNxGroupMember(members); err != nil {
+	if err := dbSetNxGroupMember(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Error})
 		return
@@ -171,7 +172,7 @@ func onRemoveMember(u *User, msg *codec.Message) {
 		return
 	}
 
-	if err := delGroupMember(members); err != nil {
+	if err := dbDelGroupMember(members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Error})
 		return
@@ -215,14 +216,16 @@ func onJoin(u *User, msg *codec.Message) {
 		return
 	}
 
+	nowUnix := time.Now().Unix()
 	member := []*Member{{
 		ID:       fmt.Sprintf("%d_%s", c.ID, u.ID),
 		GroupID:  c.ID,
 		UserID:   u.ID,
-		CreateAt: time.Now().Unix(),
+		CreateAt: nowUnix,
+		UpdateAt: nowUnix,
 	}}
 
-	if err := setNxGroupMember(member); err != nil {
+	if err := dbSetNxGroupMember(member); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Error})
 		return
@@ -257,7 +260,7 @@ func onQuit(u *User, msg *codec.Message) {
 	}
 
 	member := []*Member{c.Members[u.ID]}
-	if err := delGroupMember(member); err != nil {
+	if err := dbDelGroupMember(member); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Error})
 		return
@@ -305,14 +308,12 @@ func onSendMessage(u *User, msg *codec.Message) {
 		return
 	}
 
-	c.LastMessage = m
 	c.LastMessageID = m.GetMsgID()
 	c.LastMessageAt = m.GetCreateAt()
-	c.Message = append(c.Message, m)
 	member.UpdateAt = m.GetCreateAt()
 
 	updateGroup(c)
-	setNxGroupMember([]*Member{member})
+	dbSetNxGroupMember([]*Member{member})
 
 	group := c.Pack()
 	u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Group: group})
@@ -325,7 +326,82 @@ func onSendMessage(u *User, msg *codec.Message) {
 }
 
 func onGetGroupMembers(u *User, msg *codec.Message) {
+	req := msg.GetData().(*pb.GetGroupMembersReq)
+	log.Debugf("user(%s) onGetGroupMembers %v", u.ID, req)
 
+	c := GetGroup(req.GetGroupID())
+	if c == nil {
+		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_GroupNotExist})
+		return
+	}
+
+	if _, isMember := c.Members[u.ID]; !isMember {
+		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_UserNotInGroup})
+		return
+	}
+
+	resp := &pb.GetGroupMembersResp{Members: make([]*pb.Member, 0, len(c.Members))}
+	for _, m := range c.Members {
+		resp.Members = append(resp.Members, m.Pack())
+	}
+	u.SendToClient(msg.GetSeq(), resp)
+}
+
+func onSyncMessage(u *User, msg *codec.Message) {
+	req := msg.GetData().(*pb.SyncMessageReq)
+	log.Debugf("user(%s) onSyncMessage %v", u.ID, req)
+
+	c := GetGroup(req.GetGroupID())
+	if c == nil {
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_GroupNotExist})
+		return
+	}
+
+	if _, isMember := c.Members[u.ID]; !isMember {
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_UserNotInGroup})
+		return
+	}
+	limit := req.GetLimit()
+	if limit == 0 || limit > 50 {
+		limit = 50
+	}
+
+	ids := make([]int64, 0, limit)
+	for i := int64(0); i < int64(limit); i++ {
+		id := req.GetStartID()
+		if req.GetOldToNew() {
+			id = id + i
+		} else {
+			id = id - i
+		}
+		if id >= 1 && id <= c.LastMessageID {
+			ids = append(ids, id)
+		}
+	}
+
+	if len(ids) == 0 {
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Group: c.Pack()})
+		return
+	}
+
+	// 反转，使之从小到大排序
+	if !req.GetOldToNew() {
+		newIds := make([]int64, 0, len(ids))
+		for i := len(ids) - 1; i >= 0; i-- {
+			newIds = append(newIds, ids[i])
+		}
+		ids = newIds
+	}
+
+	infos, err := messageDeliver.loadMessage(c.ID, ids)
+	if err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Error})
+		return
+	}
+
+	resp := &pb.SyncMessageResp{Group: c.Pack(), MsgInfos: infos}
+	u.SendToClient(msg.GetSeq(), resp)
 }
 
 func init() {
@@ -334,6 +410,9 @@ func init() {
 	registerGroupHandler(uint16(pb.CmdType_CmdRemoveMemberReq), onRemoveMember)
 	registerGroupHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)
 	registerGroupHandler(uint16(pb.CmdType_CmdQuitReq), onQuit)
-	registerGroupHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
 	registerGroupHandler(uint16(pb.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
+
+	registerGroupHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
+	registerGroupHandler(uint16(pb.CmdType_CmdSyncMessageReq), onSyncMessage)
+
 }

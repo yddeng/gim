@@ -88,6 +88,12 @@ func main() {
 	registerHandler(pb.CmdType_CmdNotifyMessage, func(session dnet.Session, msg *codec.Message) {
 		log.Debugf("NotifyMessage %v", msg.GetData().(*pb.NotifyMessage))
 	})
+	registerHandler(pb.CmdType_CmdGetGroupMembersResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("GetGroupMembersResp %v", msg.GetData().(*pb.GetGroupMembersResp))
+	})
+	registerHandler(pb.CmdType_CmdSyncMessageResp, func(session dnet.Session, msg *codec.Message) {
+		log.Debugf("SyncMessageResp %v", msg.GetData().(*pb.SyncMessageResp))
+	})
 
 	go func() {
 		for {
@@ -98,7 +104,7 @@ func main() {
 }
 
 func cmd(sess dnet.Session) {
-	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send")
+	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send 7:getMembers 8:syncMessage")
 	fmt.Printf("==>")
 	var k int
 	fmt.Scan(&k)
@@ -153,6 +159,23 @@ func cmd(sess dnet.Session) {
 		_ = sess.Send(codec.NewMessage(0, &pb.SendMessageReq{
 			GroupID: int64(id),
 			Msg:     &pb.Message{Text: msg},
+		}))
+	case 7:
+		fmt.Printf("GetMember id:")
+		var id int
+		fmt.Scan(&id)
+		_ = sess.Send(codec.NewMessage(0, &pb.GetGroupMembersReq{
+			GroupID: int64(id),
+		}))
+	case 8:
+		fmt.Printf("Send id,startID,limit:")
+		var id, startID, limit int
+		fmt.Scan(&id, &startID, &limit)
+		_ = sess.Send(codec.NewMessage(0, &pb.SyncMessageReq{
+			GroupID:  int64(id),
+			StartID:  int64(startID),
+			Limit:    int32(limit),
+			OldToNew: false,
 		}))
 	}
 }

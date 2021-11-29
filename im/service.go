@@ -106,7 +106,7 @@ func Service(confpath string) {
 		panic(err)
 	}
 
-	_messageDeliver, err := NewMessageDeliver(conf.MaxBackups)
+	_messageDeliver, err := NewMessageDeliver(conf.MaxBackups, conf.MaxMessageCount)
 	if err != nil {
 		panic(err)
 	}

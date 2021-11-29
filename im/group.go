@@ -29,7 +29,7 @@ func GetGroup(groupID int64) *Group {
 	} else if c == nil {
 		groupCache.Add(groupID, &cacheGroup{c: nil})
 		return nil
-	} else if members, err := getGroupMembers(groupID); err != nil {
+	} else if members, err := dbGetGroupMembers(groupID); err != nil {
 		log.Error(err)
 		return nil
 	} else {
@@ -51,8 +51,6 @@ type Group struct {
 	Extra         map[string]string // 附加属性
 	LastMessageAt int64             // 最后一条消息的时间
 	LastMessageID int64             // 最后一条消息的ID
-	LastMessage   *pb.MessageInfo   // 最后一条消息
-	Message       []*pb.MessageInfo
 	Members       map[string]*Member
 }
 

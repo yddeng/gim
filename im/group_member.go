@@ -3,6 +3,7 @@ package im
 import (
 	"fmt"
 	"github.com/yddeng/gim/internal/db"
+	"github.com/yddeng/gim/internal/protocol/pb"
 	"github.com/yddeng/utils/log"
 	"strings"
 )
@@ -18,7 +19,25 @@ type Member struct {
 	Role     int // 会话角色
 }
 
-func setNxGroupMember(cmember []*Member) error {
+func (this *Member) Pack() *pb.Member {
+	msg := &pb.Member{
+		UserID:   this.UserID,
+		Nickname: this.Nickname,
+		Mute:     this.Mute == 1,
+		Role:     int32(this.Role),
+		CreateAt: this.CreateAt,
+		UpdateAt: this.UpdateAt,
+	}
+
+	u := GetUser(this.UserID)
+	if u != nil && u.online() {
+		msg.Online = true
+	}
+
+	return msg
+}
+
+func dbSetNxGroupMember(cmember []*Member) error {
 	sqlStr := `
 INSERT INTO "group_member" (id, group_id, user_id, nickname, create_at, update_at, mute, role)
 VALUES %s
@@ -37,7 +56,7 @@ UPDATE SET nickname = excluded.nickname, update_at = excluded.update_at, mute = 
 	return err
 }
 
-func delGroupMember(cmember []*Member) error {
+func dbDelGroupMember(cmember []*Member) error {
 	sqlStr := `
 DELETE FROM "group_member" 
 WHERE %s;`
@@ -53,7 +72,7 @@ WHERE %s;`
 	return err
 }
 
-func getUserGroups(userID string) (map[int64]*Member, error) {
+func dbGetUserGroups(userID string) (map[int64]*Member, error) {
 	sqlStr := `
 SELECT * FROM "group_member" 
 WHERE user_id = '%s';`
@@ -86,7 +105,7 @@ WHERE user_id = '%s';`
 	return groups, nil
 }
 
-func getGroupMembers(groupID int64) (map[string]*Member, error) {
+func dbGetGroupMembers(groupID int64) (map[string]*Member, error) {
 	sqlStr := `
 SELECT * FROM "group_member" 
 WHERE group_id = '%d';`

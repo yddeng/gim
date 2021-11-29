@@ -27,7 +27,7 @@ func GetUser(id string) *User {
 		return u.u
 	}
 
-	u, err := loadUser(id)
+	u, err := dbLoadUser(id)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -48,6 +48,10 @@ type User struct {
 	Extra    map[string]string // 附加属性
 	Groups   map[int64]*Member // 会话列表
 	sess     dnet.Session
+}
+
+func (this *User) online() bool {
+	return this.sess != nil
 }
 
 func (this *User) SendToClient(seq uint32, msg proto.Message) {
@@ -89,7 +93,7 @@ func onUserLogin(sess dnet.Session, msg *codec.Message) {
 	u.Extra = req.GetExtra()
 	u.sess = sess
 
-	if err := setNxUser(u); err != nil {
+	if err := dbSetNxUser(u); err != nil {
 		log.Error(err)
 		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
 		return
@@ -101,7 +105,7 @@ func onUserLogin(sess dnet.Session, msg *codec.Message) {
 	u.SendToClient(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_OK})
 }
 
-func loadUser(key string) (*User, error) {
+func dbLoadUser(key string) (*User, error) {
 	sqlStr := `
 SELECT * FROM "users" 
 WHERE id = '%s';`
@@ -128,7 +132,7 @@ WHERE id = '%s';`
 	return &u, nil
 }
 
-func setNxUser(u *User) error {
+func dbSetNxUser(u *User) error {
 	sqlStatement := `
 INSERT INTO "users" (id,create_at,update_at,extra)
 VALUES($1, $2, $3, $4) 

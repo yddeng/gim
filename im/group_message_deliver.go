@@ -5,7 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/gim/internal/db"
 	"github.com/yddeng/gim/internal/protocol/pb"
-	"github.com/yddeng/utils/log"
+	"sort"
 	"strings"
 	"time"
 )
@@ -13,13 +13,41 @@ import (
 var messageDeliver *MessageDeliver
 
 type MessageDeliver struct {
-	tableName  string
-	maxBackups int      // 日志保留时长，单位：天
-	tables     []string // 从旧到新的表名
+	maxBackups      int
+	maxMessageCount int
+	tableName       string
+	tables          []string // 从旧到新的表名
+	groupMessage    map[int64]*groupMessage
 }
 
-func NewMessageDeliver(maxBackups int) (*MessageDeliver, error) {
-	this := &MessageDeliver{maxBackups: maxBackups}
+type groupMessage struct {
+	messages map[int64]*pb.MessageInfo
+}
+
+const gcDur = 50
+
+func (this *groupMessage) gc(maxCount int) {
+	if len(this.messages) > maxCount+gcDur {
+		ids := make([]int64, 0, len(this.messages))
+		for id := range this.messages {
+			ids = append(ids, id)
+		}
+		sort.Slice(ids, func(i, j int) bool {
+			return ids[i] < ids[j]
+		})
+		off := len(ids) - maxCount
+		for i := 0; i < off; i++ {
+			delete(this.messages, ids[i])
+		}
+	}
+}
+
+func NewMessageDeliver(maxBackups, maxMessageCount int) (*MessageDeliver, error) {
+	this := &MessageDeliver{
+		maxBackups:      maxBackups,
+		maxMessageCount: maxMessageCount,
+		groupMessage:    map[int64]*groupMessage{},
+	}
 
 	tables, err := this.dbLoadAllMessageList()
 	if err != nil {
@@ -46,6 +74,7 @@ func NewMessageDeliver(maxBackups int) (*MessageDeliver, error) {
 		this.tables = append(this.tables, tableName)
 	}
 
+	sort.Strings(this.tables)
 	if len(this.tables) > this.maxBackups {
 		off := len(this.tables) - this.maxBackups
 		if err := this.dbDelMessageList(this.tables[0 : off-1]); err == nil {
@@ -82,11 +111,59 @@ func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) erro
 	if err := this.dbSetNxMessage(groupID, msg, this.tableName); err != nil {
 		return err
 	}
+
+	gm, ok := this.groupMessage[groupID]
+	if !ok {
+		gm = &groupMessage{
+			messages: make(map[int64]*pb.MessageInfo, this.maxMessageCount),
+		}
+		this.groupMessage[groupID] = gm
+	}
+	gm.messages[msg.GetMsgID()] = msg
+	gm.gc(this.maxMessageCount)
+
 	return nil
 }
 
-func (this *MessageDeliver) loadMessage() {
+func (this *MessageDeliver) loadMessage(groupID int64, ids []int64) ([]*pb.MessageInfo, error) {
+	gm, ok := this.groupMessage[groupID]
+	if !ok {
+		gm = &groupMessage{
+			messages: make(map[int64]*pb.MessageInfo, this.maxMessageCount),
+		}
+		this.groupMessage[groupID] = gm
+	}
 
+	infos := make([]*pb.MessageInfo, 0, len(ids))
+	finds := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := gm.messages[id]; ok {
+			infos = append(infos, v)
+		} else {
+			finds = append(finds, id)
+		}
+	}
+
+	for i := len(this.tables) - 1; i >= 0; i-- {
+		if ins, err := this.dbLoadMessageBatch(groupID, finds, this.tables[i]); err != nil {
+			return nil, err
+		} else {
+			infos = append(infos, ins...)
+			if len(infos) >= len(ids) {
+				break
+			}
+		}
+	}
+
+	sort.Slice(infos, func(i, j int) bool {
+		return infos[i].GetMsgID() < infos[j].GetMsgID()
+	})
+	for _, v := range infos {
+		gm.messages[v.GetMsgID()] = v
+	}
+	gm.gc(this.maxMessageCount)
+
+	return infos, nil
 }
 
 /***********  db  *************/
@@ -155,26 +232,25 @@ UPDATE SET message = $4;`
 	return err
 }
 
-func (this *MessageDeliver) dbLoadMessageBatch(groupID int64, start, limit int, tableName string) ([]*pb.MessageInfo, error) {
+func (this *MessageDeliver) dbLoadMessageBatch(groupID int64, ids []int64, tableName string) ([]*pb.MessageInfo, error) {
 	sqlStr := `
 SELECT message FROM "%s" 
 WHERE %s;`
 
-	keys := make([]string, 0, limit)
-	for i := 0; i < limit; i++ {
-		seq := start + i
-		keys = append(keys, fmt.Sprintf("id = '%d_%d'", groupID, seq))
+	keys := make([]string, 0, len(ids))
+	for _, id := range ids {
+		keys = append(keys, fmt.Sprintf("id = '%d_%d'", groupID, id))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, strings.Join(keys, " OR "))
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 
 	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
 
-	infos := make([]*pb.MessageInfo, 0, limit)
+	infos := make([]*pb.MessageInfo, 0, len(ids))
 	defer rows.Close()
 	for rows.Next() {
 		var info pb.MessageInfo

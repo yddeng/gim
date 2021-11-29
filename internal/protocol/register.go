@@ -11,8 +11,6 @@ func init() {
 
 	pb.Register("im", &proto.CreateGroupReq{}, uint16(proto.CmdType_CmdCreateGroupReq))
 	pb.Register("im", &proto.CreateGroupResp{}, uint16(proto.CmdType_CmdCreateGroupResp))
-	pb.Register("im", &proto.GetGroupMembersReq{}, uint16(proto.CmdType_CmdGetGroupMembersReq))
-	pb.Register("im", &proto.GetGroupMembersResp{}, uint16(proto.CmdType_CmdGetGroupMembersResp))
 	pb.Register("im", &proto.GetGroupListReq{}, uint16(proto.CmdType_CmdGetGroupListReq))
 	pb.Register("im", &proto.GetGroupListResp{}, uint16(proto.CmdType_CmdGetGroupListResp))
 	pb.Register("im", &proto.DissolveGroupReq{}, uint16(proto.CmdType_CmdDissolveGroupReq))
@@ -31,6 +29,8 @@ func init() {
 	pb.Register("im", &proto.NotifyMemberLeft{}, uint16(proto.CmdType_CmdNotifyMemberLeft))
 	pb.Register("im", &proto.NotifyInvited{}, uint16(proto.CmdType_CmdNotifyInvited))
 	pb.Register("im", &proto.NotifyKicked{}, uint16(proto.CmdType_CmdNotifyKicked))
+	pb.Register("im", &proto.GetGroupMembersReq{}, uint16(proto.CmdType_CmdGetGroupMembersReq))
+	pb.Register("im", &proto.GetGroupMembersResp{}, uint16(proto.CmdType_CmdGetGroupMembersResp))
 
 	pb.Register("im", &proto.SendMessageReq{}, uint16(proto.CmdType_CmdSendMessageReq))
 	pb.Register("im", &proto.SendMessageResp{}, uint16(proto.CmdType_CmdSendMessageResp))
