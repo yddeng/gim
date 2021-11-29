@@ -3,8 +3,7 @@ package im
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im/pb"
 	"sort"
 	"strings"
 	"time"
@@ -169,7 +168,7 @@ func (this *MessageDeliver) loadMessage(groupID int64, ids []int64) ([]*pb.Messa
 /***********  db  *************/
 
 func (this *MessageDeliver) dbLoadAllMessageList() ([]string, error) {
-	rows, err := db.SqlDB.Query(`SELECT table_name FROM "message_list";`)
+	rows, err := sqlDB.Query(`SELECT table_name FROM "message_list";`)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +191,7 @@ DELETE FROM "message_list"
 WHERE %s;`
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(tables, " OR "))
 	//log.Debug(sqlStatement)
-	_, err := db.SqlDB.Exec(sqlStatement)
+	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -200,7 +199,7 @@ func (this *MessageDeliver) dbSetMessageList(tableName string) error {
 	sqlStatement := `
 INSERT INTO "message_list" (table_name)  
 VALUES ($1);`
-	_, err := db.SqlDB.Exec(sqlStatement, tableName)
+	_, err := sqlDB.Exec(sqlStatement, tableName)
 	return err
 }
 
@@ -214,7 +213,7 @@ CREATE TABLE "%s" (
     PRIMARY KEY ("id")
 );`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, tableName)
-	_, err := db.SqlDB.Exec(sqlStatement)
+	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -228,7 +227,7 @@ UPDATE SET message = $4;`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName)
 	id := fmt.Sprintf("%d_%d", groupID, msg.GetMsgID())
 	data, _ := proto.Marshal(msg)
-	_, err := db.SqlDB.Exec(sqlStatement, id, groupID, msg.GetMsgID(), data)
+	_, err := sqlDB.Exec(sqlStatement, id, groupID, msg.GetMsgID(), data)
 	return err
 }
 
@@ -245,7 +244,7 @@ WHERE %s;`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, strings.Join(keys, " OR "))
 	//log.Debug(sqlStatement)
 
-	rows, err := db.SqlDB.Query(sqlStatement)
+	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}

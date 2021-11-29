@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 )
@@ -103,7 +102,7 @@ WHERE id = '%d';`
 	sqlStatement := fmt.Sprintf(sqlStr, id)
 	log.Debug(sqlStatement)
 
-	rows, err := db.SqlDB.Query(sqlStatement)
+	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ VALUES ($1,$2,$3,$4)
 RETURNING id;`
 
 	extra, _ := json.Marshal(group.Extra)
-	return db.SqlDB.QueryRow(sqlStatement,
+	return sqlDB.QueryRow(sqlStatement,
 		int32(group.Type),
 		group.Creator,
 		group.CreateAt,
@@ -152,6 +151,6 @@ WHERE id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, group.ID)
 	extra, _ := json.Marshal(group.Extra)
-	_, err := db.SqlDB.Exec(sqlStatement, extra, group.LastMessageID, group.LastMessageAt)
+	_, err := sqlDB.Exec(sqlStatement, extra, group.LastMessageID, group.LastMessageAt)
 	return err
 }

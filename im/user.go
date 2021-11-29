@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
-	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 	"time"
@@ -58,19 +56,19 @@ func (this *User) SendToClient(seq uint32, msg proto.Message) {
 	if this.sess == nil {
 		return
 	}
-	if err := this.sess.Send(codec.NewMessage(seq, msg)); err != nil {
+	if err := this.sess.Send(NewMessage(seq, msg)); err != nil {
 		this.sess.Close(err)
 	}
 }
 
-func onUserLogin(sess dnet.Session, msg *codec.Message) {
+func onUserLogin(sess dnet.Session, msg *Message) {
 	log.Infof("onUserLogin %v", msg)
 	req := msg.GetData().(*pb.UserLoginReq)
 
 	id := req.GetID()
 	ctx := sess.Context()
 	if ctx != nil {
-		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_UserAlreadyLogin}))
+		_ = sess.Send(NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_UserAlreadyLogin}))
 		return
 	}
 
@@ -95,7 +93,7 @@ func onUserLogin(sess dnet.Session, msg *codec.Message) {
 
 	if err := dbSetNxUser(u); err != nil {
 		log.Error(err)
-		_ = sess.Send(codec.NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
+		_ = sess.Send(NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
 		return
 	}
 
@@ -115,7 +113,7 @@ WHERE id = '%s';`
 
 	var u User
 	var extra []byte
-	rows, err := db.SqlDB.Query(sqlStatement)
+	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ INSERT INTO "users" (id,create_at,update_at,extra)
 VALUES($1, $2, $3, $4) 
 ON conflict(id) DO 
 UPDATE SET create_at = $2, update_at = $3, extra = $4;`
-	smt, err := db.SqlDB.Prepare(sqlStatement)
+	smt, err := sqlDB.Prepare(sqlStatement)
 	if err != nil {
 		return err
 	}

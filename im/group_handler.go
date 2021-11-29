@@ -2,13 +2,12 @@ package im
 
 import (
 	"fmt"
-	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"time"
 )
 
-func onCreateGroup(u *User, msg *codec.Message) {
+func onCreateGroup(u *User, msg *Message) {
 	req := msg.GetData().(*pb.CreateGroupReq)
 	log.Debugf("user(%s) onCreateGroup %v", u.ID, req)
 
@@ -68,7 +67,7 @@ func onCreateGroup(u *User, msg *codec.Message) {
 	c.Broadcast(notify, u.ID)
 }
 
-func onAddMember(u *User, msg *codec.Message) {
+func onAddMember(u *User, msg *Message) {
 	req := msg.GetData().(*pb.AddMemberReq)
 	log.Debugf("user(%s) onAddMember %v", u.ID, req)
 
@@ -86,6 +85,7 @@ func onAddMember(u *User, msg *codec.Message) {
 	nowUnix := time.Now().Unix()
 	members := make([]*Member, 0, len(req.GetAddIds()))
 	addIds := make([]string, 0, len(req.GetAddIds()))
+	existIds := make([]string, 0, len(req.GetAddIds()))
 	for _, id := range req.GetAddIds() {
 		if _, exist := c.Members[id]; !exist {
 			// load 数据库
@@ -99,11 +99,13 @@ func onAddMember(u *User, msg *codec.Message) {
 				})
 				addIds = append(addIds, id)
 			}
+		} else {
+			existIds = append(existIds, id)
 		}
 	}
 
 	if len(members) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK})
+		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
 		return
 	}
 
@@ -114,6 +116,7 @@ func onAddMember(u *User, msg *codec.Message) {
 	}
 
 	c.AddMember(members)
+	u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
 
 	group := c.Pack()
 	for _, m := range members {
@@ -135,7 +138,7 @@ func onAddMember(u *User, msg *codec.Message) {
 
 }
 
-func onRemoveMember(u *User, msg *codec.Message) {
+func onRemoveMember(u *User, msg *Message) {
 	req := msg.GetData().(*pb.RemoveMemberReq)
 	log.Debugf("user(%s) onRemoveMember %v", u.ID, req)
 
@@ -200,7 +203,7 @@ func onRemoveMember(u *User, msg *codec.Message) {
 
 }
 
-func onJoin(u *User, msg *codec.Message) {
+func onJoin(u *User, msg *Message) {
 	req := msg.GetData().(*pb.JoinReq)
 	log.Debugf("user(%s) onJoin %v", u.ID, req)
 
@@ -243,7 +246,7 @@ func onJoin(u *User, msg *codec.Message) {
 
 }
 
-func onQuit(u *User, msg *codec.Message) {
+func onQuit(u *User, msg *Message) {
 	req := msg.GetData().(*pb.QuitReq)
 	log.Debugf("user(%s) onQuit %v", u.ID, req)
 
@@ -278,7 +281,7 @@ func onQuit(u *User, msg *codec.Message) {
 
 }
 
-func onSendMessage(u *User, msg *codec.Message) {
+func onSendMessage(u *User, msg *Message) {
 	req := msg.GetData().(*pb.SendMessageReq)
 	log.Debugf("user(%s) onSendMessage %v", u.ID, req)
 
@@ -325,7 +328,7 @@ func onSendMessage(u *User, msg *codec.Message) {
 	c.Broadcast(notifyMessage)
 }
 
-func onGetGroupMembers(u *User, msg *codec.Message) {
+func onGetGroupMembers(u *User, msg *Message) {
 	req := msg.GetData().(*pb.GetGroupMembersReq)
 	log.Debugf("user(%s) onGetGroupMembers %v", u.ID, req)
 
@@ -347,7 +350,7 @@ func onGetGroupMembers(u *User, msg *codec.Message) {
 	u.SendToClient(msg.GetSeq(), resp)
 }
 
-func onSyncMessage(u *User, msg *codec.Message) {
+func onSyncMessage(u *User, msg *Message) {
 	req := msg.GetData().(*pb.SyncMessageReq)
 	log.Debugf("user(%s) onSyncMessage %v", u.ID, req)
 

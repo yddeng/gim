@@ -2,8 +2,7 @@ package im
 
 import (
 	"fmt"
-	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"strings"
 )
@@ -52,7 +51,7 @@ UPDATE SET nickname = excluded.nickname, update_at = excluded.update_at, mute = 
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(values, ","))
 	//log.Debug(sqlStatement)
-	_, err := db.SqlDB.Exec(sqlStatement)
+	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -68,7 +67,7 @@ WHERE %s;`
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(keys, " OR "))
 	//log.Debug(sqlStatement)
-	_, err := db.SqlDB.Exec(sqlStatement)
+	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }
 
@@ -80,7 +79,7 @@ WHERE user_id = '%s';`
 	sqlStatement := fmt.Sprintf(sqlStr, userID)
 	//log.Debug(sqlStatement)
 
-	rows, err := db.SqlDB.Query(sqlStatement)
+	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ WHERE group_id = '%d';`
 	sqlStatement := fmt.Sprintf(sqlStr, groupID)
 	log.Debug(sqlStatement)
 
-	rows, err := db.SqlDB.Query(sqlStatement)
+	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
 		return nil, err
 	}

@@ -5,8 +5,8 @@ enum ErrCode{
     OK               = 0; // 请求成功
     Error            = 1; // 服务错误
     UserAlreadyLogin      = 10; // 用户已经登陆
-    GroupNotExist  = 11; // 会话不存在
-    UserNotInGroup = 12; // 用户没有在会话中
+    GroupNotExist         = 11; // 会话不存在
+    UserNotInGroup        = 12; // 用户没有在会话中
     UserNotExist          = 13; // 用户不存在
     UserNotHasPermission  = 14; // 用户没有权限
     RequestArgumentErr    = 1001; // 请求参数错误

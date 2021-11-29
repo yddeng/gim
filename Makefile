@@ -1,2 +1,2 @@
 make proto:
-	cd internal/protocol/proto; protoc --go_out=. *.proto; cd ../pb;rm *.go;mv ../proto/*.go ./;cd ../../../
+	cd protocol/; protoc --go_out=. *.proto; cd ../im/pb;rm *.go;mv ../../protocol/*.go ./;cd ../../

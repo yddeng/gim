@@ -43,7 +43,7 @@ message MessageInfo{
     int64   msgID    = 2;
     int64   createAt = 3; // 创建时间戳秒
     bool    recalled = 4; // 撤回
-    Member  member   = 5;
+    string  userID   = 5;
 }
 
 message SendMessageReq{
@@ -68,6 +68,7 @@ message AddMemberReq{
 
 message AddMemberResp{
     ErrCode code = 1;
+    repeated string existIds = 2;
 }
 
 message NotifyMemberJoined{

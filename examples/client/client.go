@@ -3,16 +3,16 @@ package main
 import (
 	"fmt"
 	"github.com/yddeng/dnet"
-	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/protocol/pb"
+	"github.com/yddeng/gim/im"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"os"
 	"strings"
 )
 
-var handler = map[uint16]func(dnet.Session, *codec.Message){}
+var handler = map[uint16]func(dnet.Session, *im.Message){}
 
-func registerHandler(cmdType pb.CmdType, h func(dnet.Session, *codec.Message)) {
+func registerHandler(cmdType pb.CmdType, h func(dnet.Session, *im.Message)) {
 	cmd := uint16(cmdType)
 	if _, ok := handler[cmd]; ok {
 		panic(fmt.Sprintf("cmd %d is alreadly register. ", cmd))
@@ -20,7 +20,7 @@ func registerHandler(cmdType pb.CmdType, h func(dnet.Session, *codec.Message)) {
 	handler[cmd] = h
 }
 
-func dispatchMessage(sess dnet.Session, msg *codec.Message) {
+func dispatchMessage(sess dnet.Session, msg *im.Message) {
 	if h, ok := handler[msg.GetCmd()]; ok {
 		h(sess, msg)
 	}
@@ -34,12 +34,12 @@ func main() {
 	}
 
 	sess := dnet.NewTCPSession(c,
-		dnet.WithCodec(codec.NewCodec("im")),
+		dnet.WithCodec(im.Codec{}),
 		dnet.WithErrorCallback(func(session dnet.Session, err error) {
 			fmt.Println("onError", err)
 		}),
 		dnet.WithMessageCallback(func(session dnet.Session, data interface{}) {
-			msg := data.(*codec.Message)
+			msg := data.(*im.Message)
 			dispatchMessage(session, msg)
 		}),
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
@@ -48,50 +48,50 @@ func main() {
 	)
 
 	userID := os.Args[1]
-	sess.Send(codec.NewMessage(1, &pb.UserLoginReq{
+	sess.Send(im.NewMessage(1, &pb.UserLoginReq{
 		ID: userID,
 	}))
 
-	registerHandler(pb.CmdType_CmdUserLoginResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdUserLoginResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("UserLoginResp %v", msg.GetData().(*pb.UserLoginResp))
 	})
-	registerHandler(pb.CmdType_CmdCreateGroupResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdCreateGroupResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("CreateGroupResp %v", msg.GetData().(*pb.CreateGroupResp))
 	})
-	registerHandler(pb.CmdType_CmdAddMemberResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdAddMemberResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("AddMemberResp %v", msg.GetData().(*pb.AddMemberResp))
 	})
-	registerHandler(pb.CmdType_CmdRemoveMemberResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdRemoveMemberResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("RemoveMemberResp %v", msg.GetData().(*pb.RemoveMemberResp))
 	})
-	registerHandler(pb.CmdType_CmdJoinResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdJoinResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("JoinResp %v", msg.GetData().(*pb.JoinResp))
 	})
-	registerHandler(pb.CmdType_CmdQuitResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdQuitResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("QuitResp %v", msg.GetData().(*pb.QuitResp))
 	})
-	registerHandler(pb.CmdType_CmdSendMessageResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdSendMessageResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("SendMessageResp %v", msg.GetData().(*pb.SendMessageResp))
 	})
-	registerHandler(pb.CmdType_CmdNotifyInvited, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdNotifyInvited, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("NotifyInvited %v", msg.GetData().(*pb.NotifyInvited))
 	})
-	registerHandler(pb.CmdType_CmdNotifyKicked, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdNotifyKicked, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("NotifyKicked %v", msg.GetData().(*pb.NotifyKicked))
 	})
-	registerHandler(pb.CmdType_CmdNotifyMemberJoined, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdNotifyMemberJoined, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("NotifyMemberJoined %v", msg.GetData().(*pb.NotifyMemberJoined))
 	})
-	registerHandler(pb.CmdType_CmdNotifyMemberLeft, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdNotifyMemberLeft, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("NotifyMemberLeft %v", msg.GetData().(*pb.NotifyMemberLeft))
 	})
-	registerHandler(pb.CmdType_CmdNotifyMessage, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdNotifyMessage, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("NotifyMessage %v", msg.GetData().(*pb.NotifyMessage))
 	})
-	registerHandler(pb.CmdType_CmdGetGroupMembersResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdGetGroupMembersResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("GetGroupMembersResp %v", msg.GetData().(*pb.GetGroupMembersResp))
 	})
-	registerHandler(pb.CmdType_CmdSyncMessageResp, func(session dnet.Session, msg *codec.Message) {
+	registerHandler(pb.CmdType_CmdSyncMessageResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("SyncMessageResp %v", msg.GetData().(*pb.SyncMessageResp))
 	})
 
@@ -114,7 +114,7 @@ func cmd(sess dnet.Session) {
 		var users string
 		fmt.Scan(&users)
 		us := strings.Split(users, "&")
-		_ = sess.Send(codec.NewMessage(0, &pb.CreateGroupReq{
+		_ = sess.Send(im.NewMessage(0, &pb.CreateGroupReq{
 			Members: us,
 		}))
 	case 2:
@@ -123,7 +123,7 @@ func cmd(sess dnet.Session) {
 		var users string
 		fmt.Scan(&id, &users)
 		us := strings.Split(users, "&")
-		_ = sess.Send(codec.NewMessage(0, &pb.AddMemberReq{
+		_ = sess.Send(im.NewMessage(0, &pb.AddMemberReq{
 			GroupID: int64(id),
 			AddIds:  us,
 		}))
@@ -133,7 +133,7 @@ func cmd(sess dnet.Session) {
 		var users string
 		fmt.Scan(&id, &users)
 		us := strings.Split(users, "&")
-		_ = sess.Send(codec.NewMessage(0, &pb.RemoveMemberReq{
+		_ = sess.Send(im.NewMessage(0, &pb.RemoveMemberReq{
 			GroupID:   int64(id),
 			RemoveIds: us,
 		}))
@@ -141,14 +141,14 @@ func cmd(sess dnet.Session) {
 		fmt.Printf("Join id :")
 		var id int
 		fmt.Scan(&id)
-		_ = sess.Send(codec.NewMessage(0, &pb.JoinReq{
+		_ = sess.Send(im.NewMessage(0, &pb.JoinReq{
 			GroupID: int64(id),
 		}))
 	case 5:
 		fmt.Printf("Quit id :")
 		var id int
 		fmt.Scan(&id)
-		_ = sess.Send(codec.NewMessage(0, &pb.QuitReq{
+		_ = sess.Send(im.NewMessage(0, &pb.QuitReq{
 			GroupID: int64(id),
 		}))
 	case 6:
@@ -156,7 +156,7 @@ func cmd(sess dnet.Session) {
 		var id int
 		var msg string
 		fmt.Scan(&id, &msg)
-		_ = sess.Send(codec.NewMessage(0, &pb.SendMessageReq{
+		_ = sess.Send(im.NewMessage(0, &pb.SendMessageReq{
 			GroupID: int64(id),
 			Msg:     &pb.Message{Text: msg},
 		}))
@@ -164,14 +164,14 @@ func cmd(sess dnet.Session) {
 		fmt.Printf("GetMember id:")
 		var id int
 		fmt.Scan(&id)
-		_ = sess.Send(codec.NewMessage(0, &pb.GetGroupMembersReq{
+		_ = sess.Send(im.NewMessage(0, &pb.GetGroupMembersReq{
 			GroupID: int64(id),
 		}))
 	case 8:
 		fmt.Printf("Send id,startID,limit:")
 		var id, startID, limit int
 		fmt.Scan(&id, &startID, &limit)
-		_ = sess.Send(codec.NewMessage(0, &pb.SyncMessageReq{
+		_ = sess.Send(im.NewMessage(0, &pb.SyncMessageReq{
 			GroupID:  int64(id),
 			StartID:  int64(startID),
 			Limit:    int32(limit),

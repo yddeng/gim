@@ -1,4 +1,4 @@
-package config
+package im
 
 import (
 	"github.com/BurntSushi/toml"
@@ -25,18 +25,11 @@ type Config struct {
 	} `toml:"LogConfig"`
 }
 
-var config *Config
-
 func LoadConfig(path string) *Config {
 	conf := &Config{}
 	_, err := toml.DecodeFile(path, conf)
 	if err != nil {
 		panic(err)
 	}
-	config = conf
 	return conf
-}
-
-func GetConfig() *Config {
-	return config
 }

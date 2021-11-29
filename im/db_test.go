@@ -3,8 +3,8 @@ package im
 import (
 	"fmt"
 	"github.com/yddeng/gim/config"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/gim/internal/db"
-	"github.com/yddeng/gim/internal/protocol/pb"
 	"testing"
 	"time"
 )

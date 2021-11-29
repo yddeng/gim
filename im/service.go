@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yddeng/dnet"
-	"github.com/yddeng/gim/config"
-	"github.com/yddeng/gim/internal/codec"
-	"github.com/yddeng/gim/internal/db"
 	"github.com/yddeng/utils/log"
 	"net"
 )
@@ -30,14 +27,15 @@ func StartWSGateway(address string) error {
 func createSession(conn net.Conn) dnet.Session {
 	return dnet.NewTCPSession(conn,
 		//dnet.WithTimeout(time.Second*5, 0), // 超时
-		dnet.WithCodec(codec.NewCodec("im")),
+		dnet.WithCodec(Codec{}),
 		//dnet.WithErrorCallback(func(session dnet.Session, err error) {
 		//	fmt.Println("onError", err)
 		//}),
 		dnet.WithMessageCallback(func(session dnet.Session, data interface{}) {
-			dispatchMessage(session, data.(*codec.Message))
+			dispatchMessage(session, data.(*Message))
 		}),
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
+			log.Debug(session.RemoteAddr().String(), reason)
 			ctx := session.Context()
 			if ctx != nil {
 				u := ctx.(*User)
@@ -49,25 +47,25 @@ func createSession(conn net.Conn) dnet.Session {
 }
 
 var (
-	userHandler  = map[uint16]func(session dnet.Session, msg *codec.Message){}
-	groupHandler = map[uint16]func(*User, *codec.Message){}
+	userHandler  = map[uint16]func(session dnet.Session, msg *Message){}
+	groupHandler = map[uint16]func(*User, *Message){}
 )
 
-func registerGroupHandler(cmd uint16, h func(*User, *codec.Message)) {
+func registerGroupHandler(cmd uint16, h func(*User, *Message)) {
 	if _, ok := groupHandler[cmd]; ok {
 		panic(fmt.Sprintf("group handler cmd %d is alreadly register. ", cmd))
 	}
 	groupHandler[cmd] = h
 }
 
-func registerUserHandler(cmd uint16, h func(session dnet.Session, msg *codec.Message)) {
+func registerUserHandler(cmd uint16, h func(session dnet.Session, msg *Message)) {
 	if _, ok := userHandler[cmd]; ok {
 		panic(fmt.Sprintf("user handler cmd %d is alreadly register. ", cmd))
 	}
 	userHandler[cmd] = h
 }
 
-func dispatchMessage(session dnet.Session, msg *codec.Message) {
+func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
 
 	if h, ok := userHandler[cmd]; ok {
@@ -82,7 +80,7 @@ func dispatchMessage(session dnet.Session, msg *codec.Message) {
 	}
 }
 
-func initLog(conf *config.Config) {
+func initLog(conf *Config) {
 	if !conf.LogConfig.Debug {
 		log.CloseDebug()
 	}
@@ -94,10 +92,10 @@ func initLog(conf *config.Config) {
 }
 
 func Service(confpath string) {
-	conf := config.LoadConfig(confpath)
+	conf := LoadConfig(confpath)
 	initLog(conf)
 
-	if err := db.Open(conf.DBConfig.SqlType,
+	if err := Open(conf.DBConfig.SqlType,
 		conf.DBConfig.Host,
 		conf.DBConfig.Port,
 		conf.DBConfig.Database,
