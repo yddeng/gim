@@ -9,7 +9,7 @@ import (
 	"github.com/yddeng/utils/lru"
 )
 
-var groupCache *lru.Cache = lru.New(5000)
+var groupCache *lru.Cache
 
 type cacheGroup struct {
 	c *Group

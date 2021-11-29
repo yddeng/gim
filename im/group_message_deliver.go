@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const gcDur = 50
+
 var messageDeliver *MessageDeliver
 
 type MessageDeliver struct {
@@ -22,8 +24,6 @@ type MessageDeliver struct {
 type groupMessage struct {
 	messages map[int64]*pb.MessageInfo
 }
-
-const gcDur = 50
 
 func (this *groupMessage) gc(maxCount int) {
 	if len(this.messages) > maxCount+gcDur {

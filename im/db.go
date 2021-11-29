@@ -20,7 +20,7 @@ func mysqlOpen(host string, port int, dbname string, user string, password strin
 	return sql.Open("mysql", connStr)
 }
 
-func Open(sqlType string, host string, port int, dbname string, user string, password string) (err error) {
+func dbInit(sqlType string, host string, port int, dbname string, user string, password string) (err error) {
 	if sqlType == "mysql" {
 		sqlDB, err = mysqlOpen(host, port, dbname, user, password)
 	} else {

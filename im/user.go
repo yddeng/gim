@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var userCache *lru.Cache = lru.New(5000)
+var userCache *lru.Cache
 
 type cacheUser struct {
 	u *User

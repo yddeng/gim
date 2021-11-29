@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/utils/log"
+	"github.com/yddeng/utils/lru"
 	"net"
+	"runtime"
 )
 
 func StartTCPGateway(address string) error {
@@ -81,36 +83,46 @@ func dispatchMessage(session dnet.Session, msg *Message) {
 }
 
 func initLog(conf *Config) {
-	if !conf.LogConfig.Debug {
+	logCfg := conf.LogConfig
+	if !logCfg.Debug {
 		log.CloseDebug()
 	}
-	if !conf.LogConfig.EnableStdout {
+	if !logCfg.EnableStdout {
 		log.CloseStdOut()
 	}
 
-	//log.SetOutput(conf.LogConfig.Path, conf.LogConfig.Filename, conf.LogConfig.MaxSize*1024*1024)
+	//log.SetOutput(logCfg.Path, logCfg.Filename, logCfg.MaxSize*1024*1024)
 }
 
-func Service(confpath string) {
-	conf := LoadConfig(confpath)
-	initLog(conf)
+func Service(cfgPath string) {
+	config = loadCfg(cfgPath)
+	initLog(config)
 
-	if err := Open(conf.DBConfig.SqlType,
-		conf.DBConfig.Host,
-		conf.DBConfig.Port,
-		conf.DBConfig.Database,
-		conf.DBConfig.User,
-		conf.DBConfig.Password); err != nil {
+	var err error
+	if err = dbInit(config.DBConfig.SqlType,
+		config.DBConfig.Host,
+		config.DBConfig.Port,
+		config.DBConfig.Database,
+		config.DBConfig.User,
+		config.DBConfig.Password); err != nil {
 		panic(err)
 	}
 
-	_messageDeliver, err := NewMessageDeliver(conf.MaxBackups, conf.MaxMessageCount)
+	messageDeliver, err = NewMessageDeliver(config.MaxBackups, config.MaxMessageCount)
 	if err != nil {
 		panic(err)
 	}
-	messageDeliver = _messageDeliver
+
+	groupCache = lru.New(1000)
+	userCache = lru.New(5000)
+
+	task_pool = newTaskPool(runtime.NumCPU() * 2)
+	task_pool.run()
 
 	go func() {
-		StartTCPGateway("127.0.0.1:43210")
+		if err := StartTCPGateway("127.0.0.1:43210"); err != nil {
+			panic(err)
+		}
 	}()
+
 }

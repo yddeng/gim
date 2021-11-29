@@ -25,7 +25,7 @@ type Config struct {
 	} `toml:"LogConfig"`
 }
 
-func LoadConfig(path string) *Config {
+func loadCfg(path string) *Config {
 	conf := &Config{}
 	_, err := toml.DecodeFile(path, conf)
 	if err != nil {
@@ -33,3 +33,5 @@ func LoadConfig(path string) *Config {
 	}
 	return conf
 }
+
+var config *Config

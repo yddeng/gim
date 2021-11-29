@@ -2,37 +2,56 @@ package im
 
 import (
 	"errors"
-	"github.com/yddeng/utils/task"
+	"github.com/yddeng/utils/log"
+	"github.com/yddeng/utils/queue"
 	"math/rand"
 )
 
-var (
-	taskPools []*task.TaskPool
-)
+var task_pool *taskPool
 
-func InitTaskPool(num int) {
+type taskPool struct {
+	cqs []*queue.ChannelQueue
+}
+
+func newTaskPool(num int) *taskPool {
 	if num < 1 {
 		num = 1
 	}
 
-	taskPools = make([]*task.TaskPool, 0, num)
+	cqs := make([]*queue.ChannelQueue, 0, num)
 	for i := 0; i < num; i++ {
-		pool := task.NewTaskPool(1, 2048)
-		taskPools = append(taskPools, pool)
+		cq := queue.NewChannelQueue(1024)
+		cqs = append(cqs, cq)
 	}
-
+	return &taskPool{cqs: cqs}
 }
 
-// random
-func PostTask(f func()) error {
-	return PostTaskHash(rand.Int(), f)
-}
-
-// hash
-func PostTaskHash(n int, f func()) error {
-	if len(taskPools) == 0 {
+func (this *taskPool) postTaskHash(n int, f func()) error {
+	if this == nil || len(this.cqs) == 0 {
 		return errors.New("task not init. ")
 	}
-	idx := n % len(taskPools)
-	return taskPools[idx].Submit(f)
+
+	idx := n % len(this.cqs)
+	return this.cqs[idx].PushB(f)
+}
+
+func (this *taskPool) postTask(f func()) error {
+	return this.postTaskHash(rand.Int(), f)
+}
+
+func (this *taskPool) run() {
+	for i, cq := range this.cqs {
+		go func(i int) {
+			log.Debugf("task pool queue %d run. ", i)
+			for {
+				e, open := cq.Pop()
+				if !open {
+					log.Debugf("task pool queue %d stopped. ", i)
+					return
+				}
+
+				e.(func())()
+			}
+		}(i)
+	}
 }
