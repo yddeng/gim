@@ -2,7 +2,6 @@ syntax = "proto3";
 option go_package = "pb";
 
 import "errcode.proto";
-import "user.proto";
 
 enum GroupType{
     Normal    = 0; // 普通会话类型 单聊、群聊
@@ -41,10 +40,10 @@ message Message{
 
 message MessageInfo{
     Message msg      = 1;
-    string  userID   = 2; // 发言的用户
+    int64   msgID    = 2;
     int64   createAt = 3; // 创建时间戳秒
-    int64  msgID    = 4;
-    bool    recalled = 5; // 撤回
+    bool    recalled = 4; // 撤回
+    Member  member   = 5;
 }
 
 message SendMessageReq{
@@ -115,12 +114,23 @@ message QuitResp{
 }
 
 // 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性
-message GetGroupUsersReq{
+message Member{
+    bool      online  = 1;
+    string    userID  = 2;
+    map<string,string> extra = 3; // 附加属性
+    string    nickname = 4; // 群内昵称
+    bool      mute     = 5; // 禁言
+    int32     role     = 6; // 群内角色， 0:成员 1:管理员
+    int64     createAt = 7; // 入群时间
+    int64     updateAt = 8; // 上一次活跃时间
+}
+
+message GetGroupMembersReq{
     int64 groupID = 1;
 }
-message GetGroupUsersResp{
+message GetGroupMembersResp{
     ErrCode code = 1;
-    repeated User users = 2;
+    repeated Member members = 2;
 }
 
 // 解散会话

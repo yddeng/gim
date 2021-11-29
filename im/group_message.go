@@ -285,7 +285,8 @@ func onSendMessage(u *User, msg *codec.Message) {
 		return
 	}
 
-	if _, isMember := c.Members[u.ID]; !isMember {
+	member, isMember := c.Members[u.ID]
+	if !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	}
@@ -298,16 +299,7 @@ func onSendMessage(u *User, msg *codec.Message) {
 		MsgID:    msgID,
 	}
 
-	nowTableName := makeMessageTableName()
-	if tableName != nowTableName {
-		tableName = nowTableName
-		if err := createMessageTable(tableName); err != nil {
-			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
-			return
-		}
-	}
-	if err := setNxMessage(c.ID, m, tableName); err != nil {
+	if err := messageDeliver.pushMessage(c.ID, m); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
 		return
@@ -317,8 +309,10 @@ func onSendMessage(u *User, msg *codec.Message) {
 	c.LastMessageID = m.GetMsgID()
 	c.LastMessageAt = m.GetCreateAt()
 	c.Message = append(c.Message, m)
+	member.UpdateAt = m.GetCreateAt()
 
 	updateGroup(c)
+	setNxGroupMember([]*Member{member})
 
 	group := c.Pack()
 	u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Group: group})
@@ -330,6 +324,10 @@ func onSendMessage(u *User, msg *codec.Message) {
 	c.Broadcast(notifyMessage)
 }
 
+func onGetGroupMembers(u *User, msg *codec.Message) {
+
+}
+
 func init() {
 	registerGroupHandler(uint16(pb.CmdType_CmdCreateGroupReq), onCreateGroup)
 	registerGroupHandler(uint16(pb.CmdType_CmdAddMemberReq), onAddMember)
@@ -337,4 +335,5 @@ func init() {
 	registerGroupHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)
 	registerGroupHandler(uint16(pb.CmdType_CmdQuitReq), onQuit)
 	registerGroupHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
+	registerGroupHandler(uint16(pb.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
 }

@@ -65,7 +65,7 @@ func TestMember(t *testing.T) {
 	convID := int64(1)
 	members := []*Member{{
 		ID:       "1_ydd",
-		ConvID:   convID,
+		GroupID:  convID,
 		UserID:   "ydd",
 		Nickname: "ydd",
 		CreateAt: time.Now().Unix(),
@@ -73,7 +73,7 @@ func TestMember(t *testing.T) {
 		Role:     0,
 	}}
 
-	if err := setNxConvUser(members); err != nil {
+	if err := setNxGroupMember(members); err != nil {
 		t.Error(err)
 	}
 
@@ -83,13 +83,13 @@ func TestMember(t *testing.T) {
 	}
 	t.Log(convs)
 
-	user, err := getGroupUsers(convID)
+	user, err := getGroupMembers(convID)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(user)
 
-	if err := delConvUser(members); err != nil {
+	if err := delGroupMember(members); err != nil {
 		t.Error(err)
 	}
 }

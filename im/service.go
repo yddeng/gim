@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yddeng/dnet"
+	"github.com/yddeng/gim/config"
 	"github.com/yddeng/gim/internal/codec"
+	"github.com/yddeng/gim/internal/db"
 	"github.com/yddeng/utils/log"
 	"net"
 )
@@ -78,4 +80,39 @@ func dispatchMessage(session dnet.Session, msg *codec.Message) {
 		}
 		h2(ctx.(*User), msg)
 	}
+}
+
+func initLog(conf *config.Config) {
+	if !conf.LogConfig.Debug {
+		log.CloseDebug()
+	}
+	if !conf.LogConfig.EnableStdout {
+		log.CloseStdOut()
+	}
+
+	//log.SetOutput(conf.LogConfig.Path, conf.LogConfig.Filename, conf.LogConfig.MaxSize*1024*1024)
+}
+
+func Service(confpath string) {
+	conf := config.LoadConfig(confpath)
+	initLog(conf)
+
+	if err := db.Open(conf.DBConfig.SqlType,
+		conf.DBConfig.Host,
+		conf.DBConfig.Port,
+		conf.DBConfig.Database,
+		conf.DBConfig.User,
+		conf.DBConfig.Password); err != nil {
+		panic(err)
+	}
+
+	_messageDeliver, err := NewMessageDeliver(conf.MaxBackups)
+	if err != nil {
+		panic(err)
+	}
+	messageDeliver = _messageDeliver
+
+	go func() {
+		StartTCPGateway("127.0.0.1:43210")
+	}()
 }

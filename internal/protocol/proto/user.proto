@@ -11,14 +11,3 @@ message UserLoginReq{
 message UserLoginResp{
     ErrCode code = 1;
 }
-
-enum UserState{
-    OnLine  = 0;
-    OffLine = 1;
-}
-
-message User{
-    UserState state   = 1;
-    string    userID  = 2;
-    map<string,string> extra = 3; // 附加属性
-}

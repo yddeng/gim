@@ -11,8 +11,8 @@ func init() {
 
 	pb.Register("im", &proto.CreateGroupReq{}, uint16(proto.CmdType_CmdCreateGroupReq))
 	pb.Register("im", &proto.CreateGroupResp{}, uint16(proto.CmdType_CmdCreateGroupResp))
-	pb.Register("im", &proto.GetGroupUsersReq{}, uint16(proto.CmdType_CmdGetGroupUsersReq))
-	pb.Register("im", &proto.GetGroupUsersResp{}, uint16(proto.CmdType_CmdGetGroupUsersResp))
+	pb.Register("im", &proto.GetGroupMembersReq{}, uint16(proto.CmdType_CmdGetGroupMembersReq))
+	pb.Register("im", &proto.GetGroupMembersResp{}, uint16(proto.CmdType_CmdGetGroupMembersResp))
 	pb.Register("im", &proto.GetGroupListReq{}, uint16(proto.CmdType_CmdGetGroupListReq))
 	pb.Register("im", &proto.GetGroupListResp{}, uint16(proto.CmdType_CmdGetGroupListResp))
 	pb.Register("im", &proto.DissolveGroupReq{}, uint16(proto.CmdType_CmdDissolveGroupReq))

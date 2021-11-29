@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS "users";
 CREATE TABLE "users" (
-"id" varchar(255) NOT NULL,
-"create_at" int8 NOT NULL,
-"update_at" int8 NOT NULL,
-"extra"     bytea NOT NULL, /* 附加属性 */
+    "id"         varchar(255) NOT NULL,
+    "create_at"  int8 NOT NULL,
+    "update_at"  int8 NOT NULL,
+    "extra"      bytea NOT NULL, /* 附加属性 */
 PRIMARY KEY ("id")
 );
 
@@ -26,11 +26,17 @@ CREATE TABLE "group_member" (
     "user_id"          varchar(255) NOT NULL ,    /* 用户ID */
     "nickname"         varchar(255) ,             /* 群内昵称 */
     "create_at"        int8 NOT NULL,             /* 入群时间,单位：秒 */
+    "update_at"        int8 NOT NULL,             /* 上一次活跃时间,单位：秒 */
     "mute"             int4 NOT NULL DEFAULT 0 ,  /* 群内禁言，1:禁言 */
     "role"             int4 NOT NULL DEFAULT 0,   /* 成员角色 0:普通成员 1:管理员 */
     PRIMARY KEY ("id") /* 组合建 */
 );
 
+DROP TABLE IF EXISTS "message_list";
+CREATE TABLE "message_list" (
+    "table_name"    varchar(255) NOT NULL,
+    PRIMARY KEY ("table_name")
+);
 
 /*
 DROP TABLE IF EXISTS "message_2021125";

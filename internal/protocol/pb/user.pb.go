@@ -20,31 +20,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type UserState int32
-
-const (
-	UserState_OnLine  UserState = 0
-	UserState_OffLine UserState = 1
-)
-
-var UserState_name = map[int32]string{
-	0: "OnLine",
-	1: "OffLine",
-}
-
-var UserState_value = map[string]int32{
-	"OnLine":  0,
-	"OffLine": 1,
-}
-
-func (x UserState) String() string {
-	return proto.EnumName(UserState_name, int32(x))
-}
-
-func (UserState) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_116e343673f7ffaf, []int{0}
-}
-
 type UserLoginReq struct {
 	ID                   string            `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	Extra                map[string]string `protobuf:"bytes,2,rep,name=extra,proto3" json:"extra,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -131,74 +106,16 @@ func (m *UserLoginResp) GetCode() ErrCode {
 	return ErrCode_OK
 }
 
-type User struct {
-	State                UserState         `protobuf:"varint,1,opt,name=state,proto3,enum=UserState" json:"state,omitempty"`
-	UserID               string            `protobuf:"bytes,2,opt,name=userID,proto3" json:"userID,omitempty"`
-	Extra                map[string]string `protobuf:"bytes,3,rep,name=extra,proto3" json:"extra,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
-}
-
-func (m *User) Reset()         { *m = User{} }
-func (m *User) String() string { return proto.CompactTextString(m) }
-func (*User) ProtoMessage()    {}
-func (*User) Descriptor() ([]byte, []int) {
-	return fileDescriptor_116e343673f7ffaf, []int{2}
-}
-
-func (m *User) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_User.Unmarshal(m, b)
-}
-func (m *User) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_User.Marshal(b, m, deterministic)
-}
-func (m *User) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_User.Merge(m, src)
-}
-func (m *User) XXX_Size() int {
-	return xxx_messageInfo_User.Size(m)
-}
-func (m *User) XXX_DiscardUnknown() {
-	xxx_messageInfo_User.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_User proto.InternalMessageInfo
-
-func (m *User) GetState() UserState {
-	if m != nil {
-		return m.State
-	}
-	return UserState_OnLine
-}
-
-func (m *User) GetUserID() string {
-	if m != nil {
-		return m.UserID
-	}
-	return ""
-}
-
-func (m *User) GetExtra() map[string]string {
-	if m != nil {
-		return m.Extra
-	}
-	return nil
-}
-
 func init() {
-	proto.RegisterEnum("UserState", UserState_name, UserState_value)
 	proto.RegisterType((*UserLoginReq)(nil), "UserLoginReq")
 	proto.RegisterMapType((map[string]string)(nil), "UserLoginReq.ExtraEntry")
 	proto.RegisterType((*UserLoginResp)(nil), "UserLoginResp")
-	proto.RegisterType((*User)(nil), "User")
-	proto.RegisterMapType((map[string]string)(nil), "User.ExtraEntry")
 }
 
 func init() { proto.RegisterFile("user.proto", fileDescriptor_116e343673f7ffaf) }
 
 var fileDescriptor_116e343673f7ffaf = []byte{
-	// 269 bytes of a gzipped FileDescriptorProto
+	// 189 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2a, 0x2d, 0x4e, 0x2d,
 	0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x97, 0xe2, 0x4d, 0x2d, 0x2a, 0x4a, 0xce, 0x4f, 0x49, 0x85,
 	0x70, 0x95, 0x3a, 0x18, 0xb9, 0x78, 0x42, 0x8b, 0x53, 0x8b, 0x7c, 0xf2, 0xd3, 0x33, 0xf3, 0x82,
@@ -209,11 +126,6 @@ var fileDescriptor_116e343673f7ffaf = []byte{
 	0xe3, 0x40, 0x4c, 0x21, 0x11, 0x2e, 0xd6, 0xb2, 0xc4, 0x9c, 0xd2, 0x54, 0x09, 0x26, 0xb0, 0x18,
 	0x84, 0x63, 0xc5, 0x64, 0xc1, 0xa8, 0xa4, 0xcb, 0xc5, 0x8b, 0x64, 0x76, 0x71, 0x81, 0x90, 0x0c,
 	0x17, 0x0b, 0xc8, 0xa5, 0x60, 0xdd, 0x7c, 0x46, 0x1c, 0x7a, 0xae, 0x45, 0x45, 0xce, 0xf9, 0x29,
-	0xa9, 0x41, 0x60, 0x51, 0xa5, 0x45, 0x8c, 0x5c, 0x2c, 0x20, 0xf5, 0x42, 0x0a, 0x5c, 0xac, 0xc5,
-	0x25, 0x89, 0x25, 0x30, 0x75, 0x5c, 0x60, 0x17, 0x06, 0x83, 0x44, 0x82, 0x20, 0x12, 0x42, 0x62,
-	0x5c, 0x6c, 0xa0, 0x10, 0xf0, 0x74, 0x81, 0x5a, 0x0a, 0xe5, 0x09, 0xa9, 0xc1, 0xfc, 0xc6, 0x0c,
-	0xf6, 0x9b, 0x00, 0x58, 0x27, 0x35, 0xfd, 0xa4, 0xa5, 0xc2, 0xc5, 0x09, 0x77, 0x8d, 0x10, 0x17,
-	0x17, 0x9b, 0x7f, 0x9e, 0x4f, 0x66, 0x5e, 0xaa, 0x00, 0x83, 0x10, 0x37, 0x17, 0xbb, 0x7f, 0x5a,
-	0x1a, 0x98, 0xc3, 0xe8, 0xc4, 0x12, 0xc5, 0x54, 0x90, 0x94, 0xc4, 0x06, 0x8e, 0x11, 0x63, 0x40,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0x58, 0xaa, 0x29, 0x5e, 0xae, 0x01, 0x00, 0x00,
+	0xa9, 0x41, 0x60, 0x51, 0x27, 0x96, 0x28, 0xa6, 0x82, 0xa4, 0x24, 0x36, 0xb0, 0x37, 0x8c, 0x01,
+	0x01, 0x00, 0x00, 0xff, 0xff, 0x19, 0x1b, 0x32, 0xd0, 0xe3, 0x00, 0x00, 0x00,
 }

@@ -8,8 +8,8 @@ enum CmdType {
 
     CmdCreateGroupReq  = 101;
     CmdCreateGroupResp = 102;
-    CmdGetGroupUsersReq = 111;
-    CmdGetGroupUsersResp = 112;
+    CmdGetGroupMembersReq = 111;
+    CmdGetGroupMembersResp = 112;
     CmdGetGroupListReq = 121;
     CmdGetGroupListResp = 122;
     CmdDissolveGroupReq = 123;

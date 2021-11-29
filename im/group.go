@@ -29,11 +29,11 @@ func GetGroup(groupID int64) *Group {
 	} else if c == nil {
 		groupCache.Add(groupID, &cacheGroup{c: nil})
 		return nil
-	} else if users, err := getGroupUsers(groupID); err != nil {
+	} else if members, err := getGroupMembers(groupID); err != nil {
 		log.Error(err)
 		return nil
 	} else {
-		c.Members = users
+		c.Members = members
 		groupCache.Add(groupID, &cacheGroup{c: c})
 		return c
 	}

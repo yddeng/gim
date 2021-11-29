@@ -13,25 +13,26 @@ type Member struct {
 	UserID   string
 	Nickname string
 	CreateAt int64
+	UpdateAt int64
 	Mute     int // 禁言
 	Role     int // 会话角色
 }
 
 func setNxGroupMember(cmember []*Member) error {
 	sqlStr := `
-INSERT INTO "group_member" (id, group_id, user_id, nickname, create_at, mute, role)
+INSERT INTO "group_member" (id, group_id, user_id, nickname, create_at, update_at, mute, role)
 VALUES %s
 ON conflict(id) DO 
-UPDATE SET nickname = excluded.nickname, mute = excluded.mute, role = excluded.role ;`
+UPDATE SET nickname = excluded.nickname, update_at = excluded.update_at, mute = excluded.mute, role = excluded.role ;`
 
 	values := make([]string, 0, len(cmember))
 	for _, v := range cmember {
-		values = append(values, fmt.Sprintf("('%s',%d,'%s','%s',%d,%d,%d)",
-			v.ID, v.GroupID, v.UserID, v.Nickname, v.CreateAt, v.Mute, v.Role))
+		values = append(values, fmt.Sprintf("('%s',%d,'%s','%s',%d,%d,%d,%d)",
+			v.ID, v.GroupID, v.UserID, v.Nickname, v.CreateAt, v.UpdateAt, v.Mute, v.Role))
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(values, ","))
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 	_, err := db.SqlDB.Exec(sqlStatement)
 	return err
 }
@@ -47,7 +48,7 @@ WHERE %s;`
 	}
 
 	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(keys, " OR "))
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 	_, err := db.SqlDB.Exec(sqlStatement)
 	return err
 }
@@ -58,7 +59,7 @@ SELECT * FROM "group_member"
 WHERE user_id = '%s';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, userID)
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 
 	rows, err := db.SqlDB.Query(sqlStatement)
 	if err != nil {
@@ -75,6 +76,7 @@ WHERE user_id = '%s';`
 			&cm.UserID,
 			&cm.Nickname,
 			&cm.CreateAt,
+			&cm.UpdateAt,
 			&cm.Mute,
 			&cm.Role); err != nil {
 			return nil, err
@@ -84,7 +86,7 @@ WHERE user_id = '%s';`
 	return groups, nil
 }
 
-func getGroupUsers(groupID int64) (map[string]*Member, error) {
+func getGroupMembers(groupID int64) (map[string]*Member, error) {
 	sqlStr := `
 SELECT * FROM "group_member" 
 WHERE group_id = '%d';`
@@ -107,6 +109,7 @@ WHERE group_id = '%d';`
 			&cm.UserID,
 			&cm.Nickname,
 			&cm.CreateAt,
+			&cm.UpdateAt,
 			&cm.Mute,
 			&cm.Role); err != nil {
 			return nil, err
