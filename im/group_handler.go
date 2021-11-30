@@ -522,16 +522,16 @@ func onSyncMessage(u *User, msg *Message) {
 }
 
 func init() {
-	registerGroupHandler(uint16(pb.CmdType_CmdCreateGroupReq), onCreateGroup)
-	registerGroupHandler(uint16(pb.CmdType_CmdGetGroupListReq), onGetGroupList)
-	registerGroupHandler(uint16(pb.CmdType_CmdDissolveGroupReq), onDissolveGroup)
+	registerHandler(uint16(pb.CmdType_CmdCreateGroupReq), onCreateGroup)
+	registerHandler(uint16(pb.CmdType_CmdGetGroupListReq), onGetGroupList)
+	registerHandler(uint16(pb.CmdType_CmdDissolveGroupReq), onDissolveGroup)
 
-	registerGroupHandler(uint16(pb.CmdType_CmdAddMemberReq), onAddMember)
-	registerGroupHandler(uint16(pb.CmdType_CmdRemoveMemberReq), onRemoveMember)
-	registerGroupHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)
-	registerGroupHandler(uint16(pb.CmdType_CmdQuitReq), onQuit)
-	registerGroupHandler(uint16(pb.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
+	registerHandler(uint16(pb.CmdType_CmdAddMemberReq), onAddMember)
+	registerHandler(uint16(pb.CmdType_CmdRemoveMemberReq), onRemoveMember)
+	registerHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)
+	registerHandler(uint16(pb.CmdType_CmdQuitReq), onQuit)
+	registerHandler(uint16(pb.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
 
-	registerGroupHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
-	registerGroupHandler(uint16(pb.CmdType_CmdSyncMessageReq), onSyncMessage)
+	registerHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
+	registerHandler(uint16(pb.CmdType_CmdSyncMessageReq), onSyncMessage)
 }

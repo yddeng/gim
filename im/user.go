@@ -145,7 +145,3 @@ UPDATE SET create_at = $2, update_at = $3, extra = $4;`
 	_, err = smt.Exec(u.ID, u.CreateAt, u.UpdateAt, extra)
 	return err
 }
-
-func init() {
-	registerUserHandler(uint16(pb.CmdType_CmdUserLoginReq), onUserLogin)
-}

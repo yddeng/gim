@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yddeng/dnet"
+	"github.com/yddeng/gim/im/pb"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 	"github.com/yddeng/utils/task"
@@ -56,51 +57,29 @@ func createSession(conn net.Conn) dnet.Session {
 }
 
 var (
-	userHandler  = map[uint16]func(session dnet.Session, msg *Message){}
-	groupHandler = map[uint16]func(*User, *Message){}
+	msgHandler = map[uint16]func(*User, *Message){}
 )
 
-func registerGroupHandler(cmd uint16, h func(*User, *Message)) {
-	if _, ok := groupHandler[cmd]; ok {
-		panic(fmt.Sprintf("group handler cmd %d is alreadly register. ", cmd))
+func registerHandler(cmd uint16, h func(*User, *Message)) {
+	if _, ok := msgHandler[cmd]; ok {
+		panic(fmt.Sprintf("handler cmd %d is alreadly register. ", cmd))
 	}
-	groupHandler[cmd] = h
-}
-
-func registerUserHandler(cmd uint16, h func(session dnet.Session, msg *Message)) {
-	if _, ok := userHandler[cmd]; ok {
-		panic(fmt.Sprintf("user handler cmd %d is alreadly register. ", cmd))
-	}
-	userHandler[cmd] = h
+	msgHandler[cmd] = h
 }
 
 func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
-	msgType := msg.GetType()
-
-	ctx := session.Context()
-	if ctx == nil {
-		session.Close(errors.New("user is not login. "))
-		return
-	}
-
-	if h, ok := groupHandler[cmd]; ok {
-
-	}
-
-	switch msgType {
-	case MESSAGE_UESR:
-		if h, ok := userHandler[cmd]; ok {
-			h(session, msg)
-		}
-	case MESSAGE_GROUP:
-		if h2, ok := groupHandler[cmd]; ok {
+	switch cmd {
+	case uint16(pb.CmdType_CmdUserLoginReq):
+		onUserLogin(session, msg)
+	default:
+		if h, ok := msgHandler[cmd]; ok {
 			ctx := session.Context()
 			if ctx == nil {
 				session.Close(errors.New("user is not login. "))
 				return
 			}
-			h2(ctx.(*User), msg)
+			h(ctx.(*User), msg)
 		}
 	}
 }
