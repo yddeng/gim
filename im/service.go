@@ -147,3 +147,7 @@ func Service(cfgPath string) {
 	}()
 
 }
+
+func Stop() {
+	log.Info("stopping... ")
+}
