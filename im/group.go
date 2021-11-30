@@ -22,7 +22,7 @@ func GetGroup(groupID int64) *Group {
 		return c.c
 	}
 
-	if c, err := loadGroup(groupID); err != nil {
+	if c, err := dbLoadGroup(groupID); err != nil {
 		log.Error(err)
 		return nil
 	} else if c == nil {
@@ -40,6 +40,10 @@ func GetGroup(groupID int64) *Group {
 
 func addGroup(c *Group) {
 	groupCache.Add(c.ID, &cacheGroup{c: c})
+}
+
+func removeGroup(groupID int64) {
+	groupCache.Remove(groupID)
 }
 
 type Group struct {
@@ -94,7 +98,7 @@ func (this *Group) RemoveMember(members []*Member) {
 	}
 }
 
-func loadGroup(id int64) (*Group, error) {
+func dbLoadGroup(id int64) (*Group, error) {
 	sqlStr := `
 SELECT * FROM "groups" 
 WHERE id = '%d';`
@@ -129,7 +133,7 @@ WHERE id = '%d';`
 	return &group, nil
 }
 
-func insertGroup(group *Group) error {
+func dbInsertGroup(group *Group) error {
 	sqlStatement := `
 INSERT INTO "groups" (type,creator,create_at,extra)  
 VALUES ($1,$2,$3,$4)
@@ -143,7 +147,7 @@ RETURNING id;`
 		extra).Scan(&group.ID)
 }
 
-func updateGroup(group *Group) error {
+func dbUpdateGroup(group *Group) error {
 	sqlStr := `
 UPDATE "groups" 
 SET extra = $1, last_message_id = $2, last_message_at = $3
@@ -152,5 +156,15 @@ WHERE id = '%d';`
 	sqlStatement := fmt.Sprintf(sqlStr, group.ID)
 	extra, _ := json.Marshal(group.Extra)
 	_, err := sqlDB.Exec(sqlStatement, extra, group.LastMessageID, group.LastMessageAt)
+	return err
+}
+
+func dbDeleteGroup(groupID int64) error {
+	sqlStr := `
+DELETE from "groups"
+WHERE id = %d;`
+
+	sqlStatement := fmt.Sprintf(sqlStr, groupID)
+	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }

@@ -12,7 +12,7 @@ func onCreateGroup(u *User, msg *Message) {
 	log.Debugf("user(%s) onCreateGroup %v", u.ID, req)
 
 	nowUnix := time.Now().Unix()
-	c := &Group{
+	g := &Group{
 		Type:     pb.GroupType_Normal,
 		Creator:  u.ID,
 		Extra:    req.GetExtra(),
@@ -35,13 +35,13 @@ func onCreateGroup(u *User, msg *Message) {
 		return
 	}
 
-	if err := insertGroup(c); err != nil {
+	if err := dbInsertGroup(g); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
 		return
 	}
 	for _, m := range members {
-		m.GroupID = c.ID
+		m.GroupID = g.ID
 		m.ID = fmt.Sprintf("%d_%s", m.GroupID, m.UserID)
 	}
 
@@ -51,10 +51,10 @@ func onCreateGroup(u *User, msg *Message) {
 		return
 	}
 
-	c.AddMember(members)
-	addGroup(c)
+	g.AddMember(members)
+	addGroup(g)
 
-	group := c.Pack()
+	group := g.Pack()
 	u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{
 		Code:  pb.ErrCode_OK,
 		Group: group,
@@ -64,20 +64,85 @@ func onCreateGroup(u *User, msg *Message) {
 		Group:  group,
 		InitBy: u.ID,
 	}
-	c.Broadcast(notify, u.ID)
+	g.Broadcast(notify, u.ID)
+}
+
+func onGetGroupList(u *User, msg *Message) {
+	//req := msg.GetData().(*pb.GetGroupListReq)
+	//log.Debugf("user(%s) onGetGroupList %v", u.ID, req)
+
+	groups, err := dbGetUserGroups(u.ID)
+	if err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.GetGroupListResp{Code: pb.ErrCode_Error})
+		return
+	}
+
+	resp := &pb.GetGroupListResp{
+		Groups: make([]*pb.Group, 0, len(groups)),
+	}
+
+	for id := range groups {
+		g := GetGroup(id)
+		if g != nil {
+			resp.Groups = append(resp.Groups, g.Pack())
+		}
+	}
+
+	u.SendToClient(msg.GetSeq(), resp)
+}
+
+func onDissolveGroup(u *User, msg *Message) {
+	req := msg.GetData().(*pb.DissolveGroupReq)
+	log.Debugf("user(%s) onDissolveGroup %v", u.ID, req)
+
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
+		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_GroupNotExist})
+		return
+	}
+
+	if m, isMember := g.Members[u.ID]; !isMember {
+		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_UserNotInGroup})
+		return
+	} else if m.Role != 1 {
+		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_UserNotHasPermission})
+		return
+	}
+
+	if err := dbDeleteGroup(g.ID); err != nil {
+		log.Error(err)
+		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Error})
+		return
+	}
+
+	members := make([]*Member, 0, len(g.Members))
+	for uId, m := range g.Members {
+		members = append(members, m)
+		if u2 := GetUser(uId); u2 != nil {
+			u2.SendToClient(0, &pb.NotifyDissolveGroup{
+				GroupID: g.ID,
+				InitBy:  u.ID,
+			})
+		}
+	}
+
+	_ = dbDelGroupMember(members)
+	removeGroup(g.ID)
+	u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_OK})
 }
 
 func onAddMember(u *User, msg *Message) {
 	req := msg.GetData().(*pb.AddMemberReq)
 	log.Debugf("user(%s) onAddMember %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	if _, isMember := c.Members[u.ID]; !isMember {
+	if _, isMember := g.Members[u.ID]; !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	}
@@ -87,12 +152,12 @@ func onAddMember(u *User, msg *Message) {
 	addIds := make([]string, 0, len(req.GetAddIds()))
 	existIds := make([]string, 0, len(req.GetAddIds()))
 	for _, id := range req.GetAddIds() {
-		if _, exist := c.Members[id]; !exist {
+		if _, exist := g.Members[id]; !exist {
 			// load 数据库
 			if u2 := GetUser(id); u2 != nil {
 				members = append(members, &Member{
-					ID:       fmt.Sprintf("%d_%s", c.ID, id),
-					GroupID:  c.ID,
+					ID:       fmt.Sprintf("%d_%s", g.ID, id),
+					GroupID:  g.ID,
 					UserID:   id,
 					CreateAt: nowUnix,
 					UpdateAt: nowUnix,
@@ -115,10 +180,10 @@ func onAddMember(u *User, msg *Message) {
 		return
 	}
 
-	c.AddMember(members)
+	g.AddMember(members)
 	u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
 
-	group := c.Pack()
+	group := g.Pack()
 	for _, m := range members {
 		if u2 := GetUser(m.UserID); u2 != nil {
 			u2.SendToClient(0, &pb.NotifyInvited{
@@ -134,7 +199,7 @@ func onAddMember(u *User, msg *Message) {
 		JoinIds: addIds,
 		InitBy:  u.ID,
 	}
-	c.Broadcast(notifyJoined, addIds...)
+	g.Broadcast(notifyJoined, addIds...)
 
 }
 
@@ -147,13 +212,13 @@ func onRemoveMember(u *User, msg *Message) {
 		return
 	}
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	if m, isMember := c.Members[u.ID]; !isMember {
+	if m, isMember := g.Members[u.ID]; !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	} else if m.Role != 1 {
@@ -164,7 +229,7 @@ func onRemoveMember(u *User, msg *Message) {
 	rmIds := make([]string, 0, len(req.GetRemoveIds()))
 	members := make([]*Member, 0, len(req.GetRemoveIds()))
 	for _, id := range req.GetRemoveIds() {
-		if m, exist := c.Members[id]; exist {
+		if m, exist := g.Members[id]; exist {
 			rmIds = append(rmIds, id)
 			members = append(members, m)
 		}
@@ -181,9 +246,9 @@ func onRemoveMember(u *User, msg *Message) {
 		return
 	}
 
-	c.RemoveMember(members)
+	g.RemoveMember(members)
 
-	group := c.Pack()
+	group := g.Pack()
 	for _, m := range members {
 		if u2 := GetUser(m.UserID); u2 != nil {
 			u2.SendToClient(0, &pb.NotifyKicked{
@@ -199,7 +264,7 @@ func onRemoveMember(u *User, msg *Message) {
 		LeftIds:  rmIds,
 		KickedBy: u.ID,
 	}
-	c.Broadcast(notifyMemberLeft)
+	g.Broadcast(notifyMemberLeft)
 
 }
 
@@ -207,22 +272,22 @@ func onJoin(u *User, msg *Message) {
 	req := msg.GetData().(*pb.JoinReq)
 	log.Debugf("user(%s) onJoin %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	group := c.Pack()
-	if _, isMember := c.Members[u.ID]; isMember {
+	group := g.Pack()
+	if _, isMember := g.Members[u.ID]; isMember {
 		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_OK, Group: group})
 		return
 	}
 
 	nowUnix := time.Now().Unix()
 	member := []*Member{{
-		ID:       fmt.Sprintf("%d_%s", c.ID, u.ID),
-		GroupID:  c.ID,
+		ID:       fmt.Sprintf("%d_%s", g.ID, u.ID),
+		GroupID:  g.ID,
 		UserID:   u.ID,
 		CreateAt: nowUnix,
 		UpdateAt: nowUnix,
@@ -234,7 +299,7 @@ func onJoin(u *User, msg *Message) {
 		return
 	}
 
-	c.AddMember(member)
+	g.AddMember(member)
 
 	// 通知给群里其他人
 	notifyJoined := &pb.NotifyMemberJoined{
@@ -242,7 +307,7 @@ func onJoin(u *User, msg *Message) {
 		JoinIds: []string{u.ID},
 		InitBy:  u.ID,
 	}
-	c.Broadcast(notifyJoined, u.ID)
+	g.Broadcast(notifyJoined, u.ID)
 
 }
 
@@ -250,26 +315,26 @@ func onQuit(u *User, msg *Message) {
 	req := msg.GetData().(*pb.QuitReq)
 	log.Debugf("user(%s) onQuit %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	group := c.Pack()
-	if _, isMember := c.Members[u.ID]; !isMember {
+	group := g.Pack()
+	if _, isMember := g.Members[u.ID]; !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_OK, Group: group})
 		return
 	}
 
-	member := []*Member{c.Members[u.ID]}
+	member := []*Member{g.Members[u.ID]}
 	if err := dbDelGroupMember(member); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.RemoveMember(member)
+	g.RemoveMember(member)
 
 	// 通知给群里其他人
 	notifyMemberLeft := &pb.NotifyMemberLeft{
@@ -277,7 +342,7 @@ func onQuit(u *User, msg *Message) {
 		LeftIds:  []string{u.ID},
 		KickedBy: u.ID,
 	}
-	c.Broadcast(notifyMemberLeft)
+	g.Broadcast(notifyMemberLeft)
 
 }
 
@@ -285,19 +350,19 @@ func onSendMessage(u *User, msg *Message) {
 	req := msg.GetData().(*pb.SendMessageReq)
 	log.Debugf("user(%s) onSendMessage %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	member, isMember := c.Members[u.ID]
+	member, isMember := g.Members[u.ID]
 	if !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	}
 
-	msgID := c.LastMessageID + 1
+	msgID := g.LastMessageID + 1
 	m := &pb.MessageInfo{
 		Msg:      req.GetMsg(),
 		UserID:   u.ID,
@@ -305,46 +370,46 @@ func onSendMessage(u *User, msg *Message) {
 		MsgID:    msgID,
 	}
 
-	if err := messageDeliver.pushMessage(c.ID, m); err != nil {
+	if err := messageDeliver.pushMessage(g.ID, m); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	c.LastMessageID = m.GetMsgID()
-	c.LastMessageAt = m.GetCreateAt()
+	g.LastMessageID = m.GetMsgID()
+	g.LastMessageAt = m.GetCreateAt()
 	member.UpdateAt = m.GetCreateAt()
 
-	updateGroup(c)
+	dbUpdateGroup(g)
 	dbSetNxGroupMember([]*Member{member})
 
-	group := c.Pack()
+	group := g.Pack()
 	u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Group: group})
 
 	notifyMessage := &pb.NotifyMessage{
 		Group:    group,
 		MsgInfos: []*pb.MessageInfo{m},
 	}
-	c.Broadcast(notifyMessage)
+	g.Broadcast(notifyMessage)
 }
 
 func onGetGroupMembers(u *User, msg *Message) {
 	req := msg.GetData().(*pb.GetGroupMembersReq)
 	log.Debugf("user(%s) onGetGroupMembers %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	if _, isMember := c.Members[u.ID]; !isMember {
+	if _, isMember := g.Members[u.ID]; !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	}
 
-	resp := &pb.GetGroupMembersResp{Members: make([]*pb.Member, 0, len(c.Members))}
-	for _, m := range c.Members {
+	resp := &pb.GetGroupMembersResp{Members: make([]*pb.Member, 0, len(g.Members))}
+	for _, m := range g.Members {
 		resp.Members = append(resp.Members, m.Pack())
 	}
 	u.SendToClient(msg.GetSeq(), resp)
@@ -354,13 +419,13 @@ func onSyncMessage(u *User, msg *Message) {
 	req := msg.GetData().(*pb.SyncMessageReq)
 	log.Debugf("user(%s) onSyncMessage %v", u.ID, req)
 
-	c := GetGroup(req.GetGroupID())
-	if c == nil {
+	g := GetGroup(req.GetGroupID())
+	if g == nil {
 		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_GroupNotExist})
 		return
 	}
 
-	if _, isMember := c.Members[u.ID]; !isMember {
+	if _, isMember := g.Members[u.ID]; !isMember {
 		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_UserNotInGroup})
 		return
 	}
@@ -377,13 +442,13 @@ func onSyncMessage(u *User, msg *Message) {
 		} else {
 			id = id - i
 		}
-		if id >= 1 && id <= c.LastMessageID {
+		if id >= 1 && id <= g.LastMessageID {
 			ids = append(ids, id)
 		}
 	}
 
 	if len(ids) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Group: c.Pack()})
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Group: g.Pack()})
 		return
 	}
 
@@ -396,19 +461,22 @@ func onSyncMessage(u *User, msg *Message) {
 		ids = newIds
 	}
 
-	infos, err := messageDeliver.loadMessage(c.ID, ids)
+	infos, err := messageDeliver.loadMessage(g.ID, ids)
 	if err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Error})
 		return
 	}
 
-	resp := &pb.SyncMessageResp{Group: c.Pack(), MsgInfos: infos}
+	resp := &pb.SyncMessageResp{Group: g.Pack(), MsgInfos: infos}
 	u.SendToClient(msg.GetSeq(), resp)
 }
 
 func init() {
 	registerGroupHandler(uint16(pb.CmdType_CmdCreateGroupReq), onCreateGroup)
+	registerGroupHandler(uint16(pb.CmdType_CmdGetGroupListReq), onGetGroupList)
+	registerGroupHandler(uint16(pb.CmdType_CmdDissolveGroupReq), onDissolveGroup)
+
 	registerGroupHandler(uint16(pb.CmdType_CmdAddMemberReq), onAddMember)
 	registerGroupHandler(uint16(pb.CmdType_CmdRemoveMemberReq), onRemoveMember)
 	registerGroupHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)

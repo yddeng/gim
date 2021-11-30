@@ -44,8 +44,8 @@ type User struct {
 	CreateAt int64
 	UpdateAt int64
 	Extra    map[string]string // 附加属性
-	Groups   map[int64]*Member // 会话列表
-	sess     dnet.Session
+	//Groups   map[int64]*Member // 会话列表
+	sess dnet.Session
 }
 
 func (this *User) online() bool {

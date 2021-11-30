@@ -69,16 +69,23 @@ func registerUserHandler(cmd uint16, h func(session dnet.Session, msg *Message))
 
 func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
+	msgType := msg.GetType()
 
-	if h, ok := userHandler[cmd]; ok {
-		h(session, msg)
-	} else if h2, ok := groupHandler[cmd]; ok {
-		ctx := session.Context()
-		if ctx == nil {
-			session.Close(errors.New("user is not login. "))
-			return
+	switch msgType {
+	case MESSAGE_UESR:
+		if h, ok := userHandler[cmd]; ok {
+			h(session, msg)
 		}
-		h2(ctx.(*User), msg)
+	case MESSAGE_GROUP:
+		if h2, ok := groupHandler[cmd]; ok {
+			ctx := session.Context()
+			if ctx == nil {
+				session.Close(errors.New("user is not login. "))
+				return
+			}
+
+			h2(ctx.(*User), msg)
+		}
 	}
 }
 
