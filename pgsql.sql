@@ -38,6 +38,16 @@ CREATE TABLE "message_list" (
     PRIMARY KEY ("table_name")
 );
 
+DROP TABLE IF EXISTS "friend";
+CREATE TABLE "friend" (
+    "id"               varchar(255) NOT NULL,     /* 组合建，user1_user2 */
+    "user1_id"         varchar(255) NOT NULL ,    /* 用户1ID, code较小 */
+    "user2_id"         varchar(255) ,             /* 用户2ID, code较大*/
+    "create_at"        int8 NOT NULL,             /* 创建时间,单位：秒 */
+    "status"           int4 NOT NULL,             /* 1:u1->u2 2:u2->u1 3:both 4:friend */
+    PRIMARY KEY ("id") /* 组合建 */
+);
+
 /*
 DROP TABLE IF EXISTS "message_2021125";
 CREATE TABLE "message_2021125" (

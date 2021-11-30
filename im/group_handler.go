@@ -534,5 +534,4 @@ func init() {
 
 	registerGroupHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
 	registerGroupHandler(uint16(pb.CmdType_CmdSyncMessageReq), onSyncMessage)
-
 }

@@ -11,4 +11,5 @@ enum ErrCode{
     UserNotHasPermission  = 14; // 用户没有权限
     RequestArgumentErr    = 1001; // 请求参数错误
     QueryMessageNoMore    = 1002; // 没有更多的消息
+    AlreadyIsFriend       = 1003; // 已经是好友
 }

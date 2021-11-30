@@ -38,4 +38,13 @@ enum CmdType {
     CmdRecallMessageReq = 313;
     CmdRecallMessageResp = 314;
     CmdNotifyRecallMessage = 315;
+
+    CmdAddFriendReq    = 401;
+    CmdAddFriendResp   = 402;
+    CmdAgreeFriendReq  = 403;
+    CmdAgreeFriendResp = 404;
+    CmdGetFriendsReq   = 405;
+    CmdGetFriendsResp  = 406;
+    CmdNotifyAddFriend   = 407;
+    CmdNotifyAgreeFriend = 408;
 }

@@ -13,8 +13,9 @@ import (
 type MessageType int
 
 const (
-	MESSAGE_UESR  MessageType = 1
-	MESSAGE_GROUP MessageType = 2
+	MESSAGE_UESR   MessageType = 1
+	MESSAGE_GROUP  MessageType = 2
+	MESSAGE_FRIEND MessageType = 3
 )
 
 type Message struct {
@@ -209,4 +210,7 @@ func init() {
 	register(&pb.RecallMessageReq{}, uint16(pb.CmdType_CmdRecallMessageReq), MESSAGE_GROUP)
 	register(&pb.RecallMessageResp{}, uint16(pb.CmdType_CmdRecallMessageResp), MESSAGE_GROUP)
 	register(&pb.NotifyRecallMessage{}, uint16(pb.CmdType_CmdNotifyRecallMessage), MESSAGE_GROUP)
+
+	register(&pb.NotifyRecallMessage{}, uint16(pb.CmdType_CmdNotifyRecallMessage), MESSAGE_GROUP)
+
 }

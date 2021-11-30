@@ -78,6 +78,16 @@ func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
 	msgType := msg.GetType()
 
+	ctx := session.Context()
+	if ctx == nil {
+		session.Close(errors.New("user is not login. "))
+		return
+	}
+
+	if h, ok := groupHandler[cmd]; ok {
+
+	}
+
 	switch msgType {
 	case MESSAGE_UESR:
 		if h, ok := userHandler[cmd]; ok {

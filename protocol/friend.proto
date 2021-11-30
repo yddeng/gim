@@ -1,0 +1,41 @@
+syntax = "proto3";
+option go_package = "pb";
+
+import "errcode.proto";
+
+enum FriendStatus{
+    Agree = 0; // 好友状态
+    Apply = 1; // 申请状态
+}
+
+message Friend{
+    FriendStatus status = 1;
+    string       userID = 2;
+}
+
+message AddFriendReq{
+    string userID = 1;
+}
+message AddFriendResp{
+    ErrCode code = 1;
+}
+message NotifyAddFriend{
+    string userID = 1; // 申请用户ID
+}
+
+message AgreeFriendReq{
+    string userID = 1;
+    bool   agree  = 2;
+}
+message AgreeFriendResp{
+    ErrCode code = 1;
+}
+message NotifyAgreeFriend{
+    string userID = 1;
+    bool   agree  = 2;
+}
+
+message GetFriendsReq{}
+message GetFriendsResp{
+    repeated Friend friends = 1;
+}
