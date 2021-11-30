@@ -143,13 +143,15 @@ func (this *MessageDeliver) loadMessage(groupID int64, ids []int64) ([]*pb.Messa
 		}
 	}
 
-	for i := len(this.tables) - 1; i >= 0; i-- {
-		if ins, err := this.dbLoadMessageBatch(groupID, finds, this.tables[i]); err != nil {
-			return nil, err
-		} else {
-			infos = append(infos, ins...)
-			if len(infos) >= len(ids) {
-				break
+	if len(finds) > 0 {
+		for i := len(this.tables) - 1; i >= 0; i-- {
+			if ins, err := this.dbLoadMessageBatch(groupID, finds, this.tables[i]); err != nil {
+				return nil, err
+			} else {
+				infos = append(infos, ins...)
+				if len(infos) >= len(ids) {
+					break
+				}
 			}
 		}
 	}

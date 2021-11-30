@@ -109,7 +109,7 @@ SELECT * FROM "users"
 WHERE id = '%s';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, key)
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 
 	var u User
 	var extra []byte

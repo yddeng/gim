@@ -6,6 +6,7 @@ import (
 	"github.com/yddeng/dnet"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
+	"github.com/yddeng/utils/task"
 	"net"
 	"runtime"
 )
@@ -34,7 +35,9 @@ func createSession(conn net.Conn) dnet.Session {
 		//	fmt.Println("onError", err)
 		//}),
 		dnet.WithMessageCallback(func(session dnet.Session, data interface{}) {
-			dispatchMessage(session, data.(*Message))
+			_ = taskQueue.Push(func() {
+				dispatchMessage(session, data.(*Message))
+			})
 		}),
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
 			log.Debug(session.RemoteAddr().String(), reason)
@@ -83,7 +86,6 @@ func dispatchMessage(session dnet.Session, msg *Message) {
 				session.Close(errors.New("user is not login. "))
 				return
 			}
-
 			h2(ctx.(*User), msg)
 		}
 	}
@@ -123,8 +125,10 @@ func Service(cfgPath string) {
 	groupCache = lru.New(1000)
 	userCache = lru.New(5000)
 
-	task_pool = newTaskPool(runtime.NumCPU() * 2)
-	task_pool.run()
+	taskQueue = NewTaskQueue(2048)
+	go taskQueue.Run()
+
+	taskPool = task.NewTaskPool(runtime.NumCPU(), 2048)
 
 	go func() {
 		if err := StartTCPGateway("127.0.0.1:43210"); err != nil {

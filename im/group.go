@@ -12,34 +12,37 @@ import (
 var groupCache *lru.Cache
 
 type cacheGroup struct {
-	c *Group
+	g *Group
 }
 
 func GetGroup(groupID int64) *Group {
 	v, ok := groupCache.Get(groupID)
 	if ok {
-		c := v.(*cacheGroup)
-		return c.c
+		g := v.(*cacheGroup).g
+		if g != nil && g.deleting {
+			return nil
+		}
+		return g
 	}
 
-	if c, err := dbLoadGroup(groupID); err != nil {
+	if g, err := dbLoadGroup(groupID); err != nil {
 		log.Error(err)
 		return nil
-	} else if c == nil {
-		groupCache.Add(groupID, &cacheGroup{c: nil})
+	} else if g == nil {
+		groupCache.Add(groupID, &cacheGroup{g: nil})
 		return nil
 	} else if members, err := dbGetGroupMembers(groupID); err != nil {
 		log.Error(err)
 		return nil
 	} else {
-		c.Members = members
-		groupCache.Add(groupID, &cacheGroup{c: c})
-		return c
+		g.Members = members
+		groupCache.Add(groupID, &cacheGroup{g: g})
+		return g
 	}
 }
 
-func addGroup(c *Group) {
-	groupCache.Add(c.ID, &cacheGroup{c: c})
+func addGroup(g *Group) {
+	groupCache.Add(g.ID, &cacheGroup{g: g})
 }
 
 func removeGroup(groupID int64) {
@@ -55,17 +58,18 @@ type Group struct {
 	LastMessageAt int64             // 最后一条消息的时间
 	LastMessageID int64             // 最后一条消息的ID
 	Members       map[string]*Member
+	deleting      bool // 正在移除
 }
 
 func (this *Group) Pack() *pb.Group {
-	c := &pb.Group{
+	g := &pb.Group{
 		Type:          this.Type,
 		ID:            this.ID,
 		LastMessageAt: this.LastMessageAt,
 		LastMessageID: this.LastMessageID,
 	}
 
-	return c
+	return g
 }
 
 func (this *Group) Broadcast(msg proto.Message, except ...string) {
@@ -104,7 +108,7 @@ SELECT * FROM "groups"
 WHERE id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, id)
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 
 	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {

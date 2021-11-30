@@ -1,57 +1,70 @@
 package im
 
 import (
-	"errors"
-	"github.com/yddeng/utils/log"
+	"github.com/yddeng/utils"
 	"github.com/yddeng/utils/queue"
-	"math/rand"
+	"github.com/yddeng/utils/task"
+	"reflect"
 )
 
-var task_pool *taskPool
+var (
+	taskPool      *task.TaskPool
+	taskQueueList []*TaskQueue
+	taskQueue     *TaskQueue
+)
 
-type taskPool struct {
-	cqs []*queue.ChannelQueue
+type TaskQueue struct {
+	cq *queue.ChannelQueue
 }
 
-func newTaskPool(num int) *taskPool {
-	if num < 1 {
-		num = 1
+func NewTaskQueue(channelSize int) *TaskQueue {
+	return &TaskQueue{cq: queue.NewChannelQueue(channelSize)}
+}
+
+func (this *TaskQueue) Push(task func()) error {
+	return this.cq.PushB(task)
+}
+
+func (this *TaskQueue) Run() {
+	for {
+		e, open := this.cq.Pop()
+		if !open {
+			return
+		}
+		e.(func())()
+	}
+}
+
+/*
+ 将耗时函数异步处理后，调回原线程
+*/
+type wrapFunc func(callback interface{}, args ...interface{}) error
+
+func WrapFunc(oriFunc interface{}) wrapFunc {
+	oriF := reflect.ValueOf(oriFunc)
+
+	if oriF.Kind() != reflect.Func {
+		panic("WrapFunc oriFunc is not a func")
 	}
 
-	cqs := make([]*queue.ChannelQueue, 0, num)
-	for i := 0; i < num; i++ {
-		cq := queue.NewChannelQueue(1024)
-		cqs = append(cqs, cq)
-	}
-	return &taskPool{cqs: cqs}
-}
-
-func (this *taskPool) postTaskHash(n int, f func()) error {
-	if this == nil || len(this.cqs) == 0 {
-		return errors.New("task not init. ")
-	}
-
-	idx := n % len(this.cqs)
-	return this.cqs[idx].PushB(f)
-}
-
-func (this *taskPool) postTask(f func()) error {
-	return this.postTaskHash(rand.Int(), f)
-}
-
-func (this *taskPool) run() {
-	for i, cq := range this.cqs {
-		go func(i int) {
-			log.Debugf("task pool queue %d run. ", i)
-			for {
-				e, open := cq.Pop()
-				if !open {
-					log.Debugf("task pool queue %d stopped. ", i)
-					return
-				}
-
-				e.(func())()
+	return func(callback interface{}, args ...interface{}) error {
+		f := func() {
+			out, err := utils.CallFunc(oriFunc, args...)
+			if err != nil {
+				panic(err)
 			}
-		}(i)
+
+			if len(out) > 0 {
+				taskQueue.Push(func() {
+					utils.CallFunc(callback, out...)
+				})
+			} else {
+				taskQueue.Push(func() {
+					utils.CallFunc(callback)
+				})
+			}
+		}
+
+		return taskPool.Submit(f)
 	}
 }

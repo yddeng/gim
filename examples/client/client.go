@@ -94,6 +94,9 @@ func main() {
 	registerHandler(pb.CmdType_CmdSyncMessageResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("SyncMessageResp %v", msg.GetData().(*pb.SyncMessageResp))
 	})
+	registerHandler(pb.CmdType_CmdGetGroupListResp, func(session dnet.Session, msg *im.Message) {
+		log.Debugf("GetGroupListResp %v", msg.GetData().(*pb.GetGroupListResp))
+	})
 
 	go func() {
 		for {
@@ -104,7 +107,7 @@ func main() {
 }
 
 func cmd(sess dnet.Session) {
-	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send 7:getMembers 8:syncMessage")
+	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send 7:getMembers 8:syncMessage 9:getGroupList")
 	fmt.Printf("==>")
 	var k int
 	fmt.Scan(&k)
@@ -177,5 +180,8 @@ func cmd(sess dnet.Session) {
 			Limit:    int32(limit),
 			OldToNew: false,
 		}))
+	case 9:
+		fmt.Printf("Send :")
+		_ = sess.Send(im.NewMessage(0, &pb.GetGroupListReq{}))
 	}
 }

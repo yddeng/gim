@@ -3,7 +3,6 @@ package im
 import (
 	"fmt"
 	"github.com/yddeng/gim/im/pb"
-	"github.com/yddeng/utils/log"
 	"strings"
 )
 
@@ -110,7 +109,7 @@ SELECT * FROM "group_member"
 WHERE group_id = '%d';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, groupID)
-	log.Debug(sqlStatement)
+	//log.Debug(sqlStatement)
 
 	rows, err := sqlDB.Query(sqlStatement)
 	if err != nil {
