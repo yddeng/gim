@@ -7,8 +7,10 @@ import (
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 	"github.com/yddeng/utils/task"
+	"math/rand"
 	"net"
 	"runtime"
+	"time"
 )
 
 func StartTCPGateway(address string) error {
@@ -35,9 +37,11 @@ func createSession(conn net.Conn) dnet.Session {
 		//	fmt.Println("onError", err)
 		//}),
 		dnet.WithMessageCallback(func(session dnet.Session, data interface{}) {
-			_ = taskQueue.Push(func() {
+			if err := taskQueue.Push(func() {
 				dispatchMessage(session, data.(*Message))
-			})
+			}); err != nil {
+				log.Error(err)
+			}
 		}),
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
 			log.Debug(session.RemoteAddr().String(), reason)
@@ -93,6 +97,7 @@ func dispatchMessage(session dnet.Session, msg *Message) {
 
 func initLog(conf *Config) {
 	logCfg := conf.LogConfig
+	log.Infof("init logger debug=%v enableStdout%v. ", logCfg.Debug, logCfg.EnableStdout)
 	if !logCfg.Debug {
 		log.CloseDebug()
 	}
@@ -104,34 +109,39 @@ func initLog(conf *Config) {
 }
 
 func Service(cfgPath string) {
+	rand.Seed(time.Now().UnixNano())
+
+	log.Info("startup...")
+	log.Info("load config. ")
 	config = loadCfg(cfgPath)
 	initLog(config)
 
+	dbConfig := config.DBConfig
+	log.Infof("init db sqlType=%s host=%s port=%d database=%s user=%s password=%s. ",
+		dbConfig.SqlType, dbConfig.Host, dbConfig.Port, dbConfig.Database, dbConfig.User, dbConfig.Password)
 	var err error
-	if err = dbInit(config.DBConfig.SqlType,
-		config.DBConfig.Host,
-		config.DBConfig.Port,
-		config.DBConfig.Database,
-		config.DBConfig.User,
-		config.DBConfig.Password); err != nil {
+	if err = dbInit(dbConfig.SqlType, dbConfig.Host, dbConfig.Port, dbConfig.Database, dbConfig.User, dbConfig.Password); err != nil {
 		panic(err)
 	}
 
+	log.Infof("init message deliver maxBackups=%d maxMessageCount=%d. ", config.MaxBackups, config.MaxMessageCount)
 	messageDeliver, err = NewMessageDeliver(config.MaxBackups, config.MaxMessageCount)
 	if err != nil {
 		panic(err)
 	}
 
-	groupCache = lru.New(1000)
-	userCache = lru.New(5000)
+	log.Infof("lru cache userCount=%d groupCount=%d. ", config.UserCacheCount, config.GroupCacheCount)
+	userCache = lru.New(config.UserCacheCount)
+	groupCache = lru.New(config.GroupCacheCount)
 
-	taskQueue = NewTaskQueue(2048)
+	log.Infof("task count=%d. ", config.MaxTaskCount)
+	taskQueue = NewTaskQueue(config.MaxTaskCount * 2)
 	go taskQueue.Run()
 
-	taskPool = task.NewTaskPool(runtime.NumCPU(), 2048)
+	taskPool = task.NewTaskPool(runtime.NumCPU(), config.MaxTaskCount)
 
 	go func() {
-		if err := StartTCPGateway("127.0.0.1:43210"); err != nil {
+		if err := StartTCPGateway(config.Address); err != nil {
 			panic(err)
 		}
 	}()

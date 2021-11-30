@@ -1,6 +1,9 @@
 Address           = "127.0.0.1:43210"
 MaxBackups        = 3                # 聊天记录保留的表数量
 MaxMessageCount   = 200              # 每个会话最大消息缓存
+UserCacheCount    = 5000             # 缓存中用户数，lru
+GroupCacheCount   = 2000             # 缓存中会话数，lru
+MaxTaskCount      = 2048             # 任务队列容量
 
 [DBConfig]
 SqlType               = "postgres"

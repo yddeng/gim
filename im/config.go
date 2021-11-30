@@ -8,6 +8,9 @@ type Config struct {
 	Address         string `toml:"Address"`
 	MaxBackups      int    `toml:"MaxBackups"`
 	MaxMessageCount int    `toml:"MaxMessageCount"`
+	UserCacheCount  int    `toml:"UserCacheCount"`
+	GroupCacheCount int    `toml:"GroupCacheCount"`
+	MaxTaskCount    int    `toml:"MaxTaskCount"`
 	DBConfig        struct {
 		SqlType  string `toml:"SqlType"`
 		Host     string `toml:"Host"`
