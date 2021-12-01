@@ -55,11 +55,11 @@ func WrapFunc(oriFunc interface{}) wrapFunc {
 			}
 
 			if len(out) > 0 {
-				taskQueue.Push(func() {
+				_ = taskQueue.Push(func() {
 					utils.CallFunc(callback, out...)
 				})
 			} else {
-				taskQueue.Push(func() {
+				_ = taskQueue.Push(func() {
 					utils.CallFunc(callback)
 				})
 			}

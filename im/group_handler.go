@@ -68,11 +68,11 @@ func onCreateGroup(u *User, msg *Message) {
 			g.Broadcast(notify, u.ID)
 		}, members); err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Busy})
 		}
 	}, g); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -100,7 +100,7 @@ func onGetGroupList(u *User, msg *Message) {
 		u.SendToClient(msg.GetSeq(), resp)
 	}, u.ID); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.GetGroupListResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.GetGroupListResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -149,7 +149,7 @@ func onDissolveGroup(u *User, msg *Message) {
 
 	}, g.ID); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -223,7 +223,7 @@ func onAddMember(u *User, msg *Message) {
 		g.Broadcast(notifyJoined, addIds...)
 	}, members); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -293,7 +293,7 @@ func onRemoveMember(u *User, msg *Message) {
 
 	}, members); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Busy})
 	}
 
 }
@@ -341,7 +341,7 @@ func onJoin(u *User, msg *Message) {
 
 	}, member); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Busy})
 	}
 
 }
@@ -381,7 +381,7 @@ func onQuit(u *User, msg *Message) {
 
 	}, member); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -456,7 +456,7 @@ func onSendMessage(u *User, msg *Message) {
 		g.Broadcast(notifyMessage)
 	}, g.ID, m); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Busy})
 	}
 }
 
@@ -517,7 +517,7 @@ func onSyncMessage(u *User, msg *Message) {
 		u.SendToClient(msg.GetSeq(), resp)
 	}, g.ID, ids); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Error})
+		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Busy})
 	}
 }
 

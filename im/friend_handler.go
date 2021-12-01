@@ -41,7 +41,7 @@ func onAddFriend(u *User, msg *Message) {
 
 			}, f); err != nil {
 				log.Error(err)
-				u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{Code: pb.ErrCode_Error})
+				u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{Code: pb.ErrCode_Busy})
 			}
 		}
 	} else {
@@ -70,7 +70,7 @@ func onAddFriend(u *User, msg *Message) {
 
 		}, f); err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{Code: pb.ErrCode_Busy})
 		}
 	}
 }
@@ -104,7 +104,7 @@ func onAgreeFriend(u *User, msg *Message) {
 
 				}, f); err != nil {
 					log.Error(err)
-					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{Code: pb.ErrCode_Error})
+					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{Code: pb.ErrCode_Busy})
 				}
 			} else {
 				if err := WrapFunc(dbDelFriend)(func(err error) {
@@ -119,7 +119,7 @@ func onAgreeFriend(u *User, msg *Message) {
 
 				}, f.ID); err != nil {
 					log.Error(err)
-					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{Code: pb.ErrCode_Error})
+					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{Code: pb.ErrCode_Busy})
 				}
 			}
 
