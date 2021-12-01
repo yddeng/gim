@@ -18,6 +18,14 @@ type cacheUser struct {
 	u *User
 }
 
+// lru 淘汰user时，用户在线就添加回去
+func onUserEvicted(key lru.Key, value interface{}) {
+	u := value.(*cacheUser).u
+	if u != nil && u.sess != nil {
+		addUser(u)
+	}
+}
+
 func GetUser(id string) *User {
 	v, ok := userCache.Get(id)
 	if ok {

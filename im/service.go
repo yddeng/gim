@@ -11,13 +11,17 @@ import (
 	"math/rand"
 	"net"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
+
+var crtConnCount int32
 
 func StartTCPGateway(address string) error {
 	log.Infof("start tcp gateway on address:%s. ", address)
 	return dnet.ServeTCPFunc(address, func(conn net.Conn) {
 		log.Debug("new tcp client", conn.RemoteAddr().String())
+		atomic.AddInt32(&crtConnCount, 1)
 		_ = createSession(conn)
 	})
 }
@@ -45,6 +49,7 @@ func createSession(conn net.Conn) dnet.Session {
 			}
 		}),
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
+			atomic.AddInt32(&crtConnCount, -1)
 			log.Debug(session.RemoteAddr().String(), reason)
 			ctx := session.Context()
 			if ctx != nil {
@@ -128,16 +133,18 @@ func Service(cfgPath string) {
 		panic(err)
 	}
 
-	log.Infof("lru cache userCount=%d groupCount=%d. ", config.UserCacheCount, config.GroupCacheCount)
-	userCache = lru.New(config.UserCacheCount)
-	groupCache = lru.New(config.GroupCacheCount)
+	log.Infof("lru cache userCount=%d groupCount=%d. ", config.MaxConnCount*2, config.MaxConnCount)
+	userCache = lru.New(config.MaxConnCount * 2)
+	userCache.OnEvicted = onUserEvicted
+	groupCache = lru.New(config.MaxConnCount)
 
-	log.Infof("task count=%d. ", config.MaxTaskCount)
+	log.Infof("task queue channel size is %d. ", config.MaxTaskCount)
 	taskQueue = NewTaskQueue(config.MaxTaskCount * 2)
 	go taskQueue.Run()
 
 	taskPool = task.NewTaskPool(runtime.NumCPU(), config.MaxTaskCount)
 
+	log.Infof("connection max count is %d. ", config.MaxConnCount)
 	go func() {
 		if err := StartTCPGateway(config.Address); err != nil {
 			panic(err)
