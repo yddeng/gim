@@ -1,21 +1,17 @@
 package im
 
 import (
-	"fmt"
-	"github.com/yddeng/gim/config"
 	"github.com/yddeng/gim/im/pb"
-	"github.com/yddeng/gim/internal/db"
 	"testing"
 	"time"
 )
 
-func init() {
-	conf := config.LoadConfig("../../config/config.toml")
-	dbConfig := conf.DBConfig
-	db.Open(dbConfig.SqlType, dbConfig.Host, dbConfig.Port, dbConfig.Database, dbConfig.User, dbConfig.Password)
+func startService() {
+	Service("../config.toml")
 }
 
 func TestUser(t *testing.T) {
+	startService()
 	u := &User{
 		ID:       "ydd",
 		CreateAt: time.Now().Unix(),
@@ -23,11 +19,11 @@ func TestUser(t *testing.T) {
 		Extra:    map[string]string{"name": "ydd", "age": "24"},
 	}
 
-	if err := setNxUser(u); err != nil {
+	if err := dbSetNxUser(u); err != nil {
 		t.Error(err)
 	}
 
-	u, err := loadUser("ydd")
+	u, err := dbLoadUser("ydd")
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,6 +31,7 @@ func TestUser(t *testing.T) {
 }
 
 func TestGroup(t *testing.T) {
+	startService()
 	conv := &Group{
 		Type:     pb.GroupType_Normal,
 		ID:       0,
@@ -42,12 +39,12 @@ func TestGroup(t *testing.T) {
 		CreateAt: time.Now().Unix(),
 	}
 
-	if err := insertGroup(conv); err != nil {
+	if err := dbInsertGroup(conv); err != nil {
 		t.Error(err)
 	}
 	t.Log(conv.ID)
 
-	conv2, err := loadGroup(2)
+	conv2, err := dbLoadGroup(2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,13 +52,14 @@ func TestGroup(t *testing.T) {
 
 	conv.LastMessageID = 1
 	conv.LastMessageAt = time.Now().Unix()
-	if err := updateGroup(conv); err != nil {
+	if err := dbUpdateGroup(conv); err != nil {
 		t.Error(err)
 	}
 
 }
 
 func TestMember(t *testing.T) {
+	startService()
 	convID := int64(1)
 	members := []*Member{{
 		ID:       "1_ydd",
@@ -73,23 +71,23 @@ func TestMember(t *testing.T) {
 		Role:     0,
 	}}
 
-	if err := setNxGroupMember(members); err != nil {
+	if err := dbSetNxGroupMember(members); err != nil {
 		t.Error(err)
 	}
 
-	convs, err := getUserGroups("ydd")
+	convs, err := dbGetUserGroups("ydd")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(convs)
 
-	user, err := getGroupMembers(convID)
+	user, err := dbGetGroupMembers(convID)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(user)
 
-	if err := delGroupMember(members); err != nil {
+	if err := dbDelGroupMember(members); err != nil {
 		t.Error(err)
 	}
 }
@@ -98,42 +96,28 @@ func TestDate(t *testing.T) {
 	t.Log(time.Now().AddDate(0, -2, -20).Format("20060102"))
 }
 
-func TestMessage(t *testing.T) {
-	msg := &pb.MessageInfo{
-		Msg: &pb.Message{
-			Text: "hello world",
-		},
-		UserID:   "ydd",
+func TestFriendDB(t *testing.T) {
+	startService()
+
+	f := &Friend{
+		ID:       "1_2",
+		UserID1:  "1",
+		UserID2:  "2",
 		CreateAt: time.Now().Unix(),
-		MsgID:    1,
-		Recalled: false,
-	}
-	tableName := makeMessageTableName()
-
-	if exist := existMessageTable(tableName); !exist {
-		t.Log("not exist")
-		createMessageTable(tableName)
+		Status:   FriendStatusAgree,
 	}
 
-	for i := int64(1); i <= 20; i++ {
-		msg.MsgID = i
-		if err := setNxMessage(1, msg, tableName); err != nil {
-			t.Error(err)
-		}
-	}
-
-	limit := 10
-	infos, err := loadMessageBatch(1, 15, limit, tableName)
-	if err != nil {
+	if err := dbSetNxFriend(f); err != nil {
 		t.Error(err)
 	}
 
-	if len(infos) < limit {
-		// 部分数据不在当前表中，应向前或向后查找
-		t.Log(fmt.Sprintf("table %s not enough message", tableName))
-	}
-	for _, v := range infos {
-		t.Log(v)
-	}
+	friends, err := dbLoadFriends("1")
+	t.Log(friends, err)
 
+	friends, err = dbLoadFriends("2")
+	t.Log(friends, err)
+
+	if err := dbDelFriend("1_2"); err != nil {
+		t.Error(err)
+	}
 }

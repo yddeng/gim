@@ -65,7 +65,7 @@ func NewMessageDeliver(maxBackups, maxMessageCount int) (*MessageDeliver, error)
 		}
 	}
 	if !exist {
-		if err := this.dbCreateMessageTable(tableName); err != nil {
+		if err := this.dbCreateTableMessage(tableName); err != nil {
 			return nil, err
 		} else if err = this.dbSetMessageList(tableName); err != nil {
 			return nil, err
@@ -76,8 +76,10 @@ func NewMessageDeliver(maxBackups, maxMessageCount int) (*MessageDeliver, error)
 	sort.Strings(this.tables)
 	if len(this.tables) > this.maxBackups {
 		off := len(this.tables) - this.maxBackups
-		if err := this.dbDelMessageList(this.tables[0 : off-1]); err == nil {
+		delList := this.tables[:off]
+		if err := this.dbDelMessageList(delList); err == nil {
 			this.tables = this.tables[off:]
+			_ = this.dbDropTableMessage(delList)
 		}
 	}
 
@@ -91,7 +93,7 @@ func (this *MessageDeliver) makeTableName() string {
 func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) error {
 	tableName := this.makeTableName()
 	if this.tableName != tableName {
-		if err := this.dbCreateMessageTable(tableName); err != nil {
+		if err := this.dbCreateTableMessage(tableName); err != nil {
 			return err
 		} else if err = this.dbSetMessageList(tableName); err != nil {
 			return err
@@ -101,8 +103,10 @@ func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) erro
 
 		if len(this.tables) > this.maxBackups {
 			off := len(this.tables) - this.maxBackups
-			if err := this.dbDelMessageList(this.tables[0 : off-1]); err == nil {
+			delList := this.tables[:off]
+			if err := this.dbDelMessageList(delList); err == nil {
 				this.tables = this.tables[off:]
+				_ = this.dbDropTableMessage(delList)
 			}
 		}
 	}
@@ -191,7 +195,11 @@ func (this *MessageDeliver) dbDelMessageList(tables []string) error {
 	sqlStr := `
 DELETE FROM "message_list" 
 WHERE %s;`
-	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(tables, " OR "))
+	keys := make([]string, 0, len(tables))
+	for _, name := range tables {
+		keys = append(keys, fmt.Sprintf("table_name = '%s'", name))
+	}
+	sqlStatement := fmt.Sprintf(sqlStr, strings.Join(keys, " OR "))
 	//log.Debug(sqlStatement)
 	_, err := sqlDB.Exec(sqlStatement)
 	return err
@@ -205,7 +213,7 @@ VALUES ($1);`
 	return err
 }
 
-func (this *MessageDeliver) dbCreateMessageTable(tableName string) error {
+func (this *MessageDeliver) dbCreateTableMessage(tableName string) error {
 	sqlStr := `DROP TABLE IF EXISTS "%s";
 CREATE TABLE "%s" (
     "id"           varchar(255) NOT NULL,
@@ -215,6 +223,16 @@ CREATE TABLE "%s" (
     PRIMARY KEY ("id")
 );`
 	sqlStatement := fmt.Sprintf(sqlStr, tableName, tableName)
+	_, err := sqlDB.Exec(sqlStatement)
+	return err
+}
+
+func (this *MessageDeliver) dbDropTableMessage(tables []string) error {
+	sqlStr := `DROP TABLE IF EXISTS "%s";`
+	sqlStatement := ""
+	for _, name := range tables {
+		sqlStatement += fmt.Sprintf(sqlStr, name)
+	}
 	_, err := sqlDB.Exec(sqlStatement)
 	return err
 }

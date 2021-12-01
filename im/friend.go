@@ -29,12 +29,27 @@ func GetFriends(userID string) map[string]*Friend {
 }
 
 func addFriend(userID string, f *Friend) {
-
+	c, ok := friendCache.Get(userID)
+	if ok {
+		cf := c.(*cacheFriend)
+		cf.fs[userID] = f
+	}
 }
 
-func removeFriend(userID1, userID2 string) {
-
+func removeFriend(userID, friendID string) {
+	c, ok := friendCache.Get(userID)
+	if ok {
+		cf := c.(*cacheFriend)
+		delete(cf.fs, friendID)
+	}
 }
+
+const (
+	FriendStatusU1U2  = 1
+	FriendStatusU2U1  = 2
+	FriendStatusBoth  = 3
+	FriendStatusAgree = 4
+)
 
 type Friend struct {
 	ID       string
@@ -94,10 +109,10 @@ UPDATE SET  create_at = $4, status = $5;`
 	return err
 }
 
-func dbDeleteFriend(id string) error {
+func dbDelFriend(id string) error {
 	sqlStr := `
 DELETE from "friend"
-WHERE id = %s;`
+WHERE id = '%s';`
 
 	sqlStatement := fmt.Sprintf(sqlStr, id)
 	_, err := sqlDB.Exec(sqlStatement)

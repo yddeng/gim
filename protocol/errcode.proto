@@ -4,6 +4,7 @@ option go_package = "pb";
 enum ErrCode{
     OK               = 0; // 请求成功
     Error            = 1; // 服务错误
+    Busy             = 2; // 服务错误
     UserAlreadyLogin      = 10; // 用户已经登陆
     GroupNotExist         = 11; // 会话不存在
     UserNotInGroup        = 12; // 用户没有在会话中
@@ -11,5 +12,7 @@ enum ErrCode{
     UserNotHasPermission  = 14; // 用户没有权限
     RequestArgumentErr    = 1001; // 请求参数错误
     QueryMessageNoMore    = 1002; // 没有更多的消息
-    AlreadyIsFriend       = 1003; // 已经是好友
+
+    FriendAlreadyIsFriend       = 1101; // 已经是好友
+    FriendApplyClosed           = 1102; // 申请已撤销
 }
