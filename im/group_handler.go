@@ -50,6 +50,7 @@ func onCreateGroup(u *User, msg *Message) {
 			if err != nil {
 				log.Error(err)
 				u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
+				_ = taskPool.Submit(func() { _ = dbDeleteGroup(g.ID) })
 				return
 			}
 			g.AddMember(members)
@@ -130,22 +131,19 @@ func onDissolveGroup(u *User, msg *Message) {
 			u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Error})
 			return
 		}
+		notifyDissolve := &pb.NotifyDissolveGroup{
+			GroupID: g.ID,
+			InitBy:  u.ID,
+		}
 		members := make([]*Member, 0, len(g.Members))
 		for uId, m := range g.Members {
 			members = append(members, m)
-			if u2 := GetUser(uId); u2 != nil {
-				u2.SendToClient(0, &pb.NotifyDissolveGroup{
-					GroupID: g.ID,
-					InitBy:  u.ID,
-				})
-			}
+			NotifyUser(uId, notifyDissolve)
 		}
 
-		_ = taskPool.Submit(func() {
-			_ = dbDelGroupMember(members)
-		})
 		removeGroup(g.ID)
 		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_OK})
+		_ = taskPool.Submit(func() { _ = dbDelGroupMember(members) })
 
 	}, g.ID); err != nil {
 		log.Error(err)
@@ -205,13 +203,13 @@ func onAddMember(u *User, msg *Message) {
 		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
 
 		group := g.Pack()
+		notifyInvited := &pb.NotifyInvited{
+			Group:  group,
+			InitBy: u.ID,
+		}
+
 		for _, m := range members {
-			if u2 := GetUser(m.UserID); u2 != nil {
-				u2.SendToClient(0, &pb.NotifyInvited{
-					Group:  group,
-					InitBy: u.ID,
-				})
-			}
+			NotifyUser(m.UserID, notifyInvited)
 		}
 
 		// 通知给群里其他人
@@ -274,13 +272,12 @@ func onRemoveMember(u *User, msg *Message) {
 		g.RemoveMember(members)
 
 		group := g.Pack()
+		notifyKicked := &pb.NotifyKicked{
+			Group:    group,
+			KickedBy: u.ID,
+		}
 		for _, m := range members {
-			if u2 := GetUser(m.UserID); u2 != nil {
-				u2.SendToClient(0, &pb.NotifyKicked{
-					Group:    group,
-					KickedBy: u.ID,
-				})
-			}
+			NotifyUser(m.UserID, notifyKicked)
 		}
 
 		// 通知给群里其他人

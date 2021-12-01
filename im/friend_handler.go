@@ -37,7 +37,7 @@ func onAddFriend(u *User, msg *Message) {
 					return
 				}
 				u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{})
-				addUser.SendToClient(0, &pb.NotifyAddFriend{UserID: u.ID})
+				NotifyUser(addID, &pb.NotifyAddFriend{UserID: u.ID})
 
 			}, f); err != nil {
 				log.Error(err)
@@ -66,7 +66,7 @@ func onAddFriend(u *User, msg *Message) {
 			}
 			addFriend(u.ID, f)
 			u.SendToClient(msg.GetSeq(), &pb.AddFriendResp{})
-			addUser.SendToClient(0, &pb.NotifyAddFriend{UserID: u.ID})
+			NotifyUser(addID, &pb.NotifyAddFriend{UserID: u.ID})
 
 		}, f); err != nil {
 			log.Error(err)
@@ -100,7 +100,7 @@ func onAgreeFriend(u *User, msg *Message) {
 						return
 					}
 					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{})
-					GetUser(agreeID).SendToClient(0, &pb.NotifyAgreeFriend{UserID: u.ID, Agree: true})
+					NotifyUser(agreeID, &pb.NotifyAgreeFriend{UserID: u.ID, Agree: true})
 
 				}, f); err != nil {
 					log.Error(err)
@@ -115,7 +115,7 @@ func onAgreeFriend(u *User, msg *Message) {
 					}
 					removeFriend(u.ID, agreeID)
 					u.SendToClient(msg.GetSeq(), &pb.AgreeFriendResp{})
-					GetUser(agreeID).SendToClient(0, &pb.NotifyAgreeFriend{UserID: u.ID, Agree: false})
+					NotifyUser(agreeID, &pb.NotifyAgreeFriend{UserID: u.ID, Agree: false})
 
 				}, f.ID); err != nil {
 					log.Error(err)

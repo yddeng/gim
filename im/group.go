@@ -82,10 +82,7 @@ func (this *Group) Broadcast(msg proto.Message, except ...string) {
 			}
 		}
 		if !has {
-			u := GetUser(id)
-			if u != nil {
-				u.SendToClient(0, msg)
-			}
+			NotifyUser(id, msg)
 		}
 	}
 }

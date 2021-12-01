@@ -25,13 +25,16 @@ func (this *Member) Pack() *pb.Member {
 		Role:     int32(this.Role),
 		CreateAt: this.CreateAt,
 		UpdateAt: this.UpdateAt,
+		Online:   false,
 	}
 
-	u := GetUser(this.UserID)
-	if u != nil && u.online() {
-		msg.Online = true
+	v, ok := userCache.Get(this.UserID)
+	if ok {
+		u := v.(*cacheUser).u
+		if u != nil && u.online() {
+			msg.Online = true
+		}
 	}
-
 	return msg
 }
 

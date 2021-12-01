@@ -39,6 +39,16 @@ func addUser(u *User) {
 	userCache.Add(u.ID, &cacheUser{u: u})
 }
 
+func NotifyUser(userID string, msg proto.Message) {
+	v, ok := userCache.Get(userID)
+	if ok {
+		u := v.(*cacheUser).u
+		if u != nil {
+			u.SendToClient(0, msg)
+		}
+	}
+}
+
 type User struct {
 	ID       string
 	CreateAt int64
@@ -62,8 +72,8 @@ func (this *User) SendToClient(seq uint32, msg proto.Message) {
 }
 
 func onUserLogin(sess dnet.Session, msg *Message) {
-	log.Infof("onUserLogin %v", msg)
 	req := msg.GetData().(*pb.UserLoginReq)
+	log.Infof("onUserLogin %v", req)
 
 	id := req.GetID()
 	ctx := sess.Context()
