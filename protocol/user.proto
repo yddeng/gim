@@ -11,3 +11,7 @@ message UserLoginReq{
 message UserLoginResp{
     ErrCode code = 1;
 }
+
+message Heartbeat{
+    int64 timestamp = 1;
+}

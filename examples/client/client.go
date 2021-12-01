@@ -8,6 +8,7 @@ import (
 	"github.com/yddeng/utils/log"
 	"os"
 	"strings"
+	"time"
 )
 
 var handler = map[uint16]func(dnet.Session, *im.Message){}
@@ -46,6 +47,13 @@ func main() {
 			fmt.Println("onClose", reason)
 		}),
 	)
+
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			_ = sess.Send(im.NewMessage(0, &pb.Heartbeat{}))
+		}
+	}()
 
 	userID := os.Args[1]
 	sess.Send(im.NewMessage(1, &pb.UserLoginReq{

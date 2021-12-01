@@ -32,7 +32,7 @@ func StartWSGateway(address string) error {
 
 func createSession(conn net.Conn) dnet.Session {
 	return dnet.NewTCPSession(conn,
-		//dnet.WithTimeout(time.Second*5, 0), // 超时
+		dnet.WithTimeout(time.Second*time.Duration(config.HeartbeatTimeout), 0),
 		dnet.WithCodec(Codec{}),
 		//dnet.WithErrorCallback(func(session dnet.Session, err error) {
 		//	fmt.Println("onError", err)
@@ -70,6 +70,8 @@ func registerHandler(cmd uint16, h func(*User, *Message)) {
 func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
 	switch cmd {
+	case uint16(pb.CmdType_CmdHeartbeat):
+		_ = session.Send(NewMessage(msg.GetSeq(), &pb.Heartbeat{Timestamp: time.Now().Unix()}))
 	case uint16(pb.CmdType_CmdUserLoginReq):
 		onUserLogin(session, msg)
 	default:

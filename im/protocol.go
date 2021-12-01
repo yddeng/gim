@@ -150,6 +150,7 @@ func unmarshal(cmd uint16, buff []byte) (interface{}, error) {
 }
 
 func init() {
+	register(&pb.Heartbeat{}, uint16(pb.CmdType_CmdHeartbeat))
 	register(&pb.UserLoginReq{}, uint16(pb.CmdType_CmdUserLoginReq))
 	register(&pb.UserLoginResp{}, uint16(pb.CmdType_CmdUserLoginResp))
 

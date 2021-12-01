@@ -3,8 +3,9 @@ option go_package = "pb";
 
 enum CmdType {
     CmdNone = 0;
-    CmdUserLoginReq = 1;
+    CmdUserLoginReq  = 1;
     CmdUserLoginResp = 2;
+    CmdHeartbeat     = 3;
 
     CmdCreateGroupReq  = 101;
     CmdCreateGroupResp = 102;
