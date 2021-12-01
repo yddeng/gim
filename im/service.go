@@ -48,10 +48,15 @@ func createSession(conn net.Conn) dnet.Session {
 			log.Debug(session.RemoteAddr().String(), reason)
 			ctx := session.Context()
 			if ctx != nil {
-				u := ctx.(*User)
-				log.Infof("onClose user(%s) %s. ", u.ID, reason)
-				u.sess.SetContext(nil)
-				u.sess = nil
+				_ = taskQueue.Push(func() {
+					u := ctx.(*User)
+					log.Infof("onClose user(%s) %s. ", u.ID, reason)
+					if u.sess != session {
+						return
+					}
+					u.sess.SetContext(nil)
+					u.sess = nil
+				})
 			}
 		}))
 }
@@ -96,7 +101,9 @@ func initLog(conf *Config) {
 		log.CloseStdOut()
 	}
 
-	//log.SetOutput(logCfg.Path, logCfg.Filename, logCfg.MaxSize*1024*1024)
+	if logCfg.MaxSize != 0 {
+		log.SetOutput(logCfg.Path, logCfg.Filename, logCfg.MaxSize*1024*1024)
+	}
 }
 
 func Service(cfgPath string) {
