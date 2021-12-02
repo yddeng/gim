@@ -35,46 +35,46 @@ func onCreateGroup(u *User, msg *Message) {
 		return
 	}
 
-	if err := WrapFunc(dbInsertGroup)(func(err error) {
-		if err != nil {
-			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
-			return
+	f := func(g *Group, members []*Member) error {
+		if err := dbInsertGroup(g); err != nil {
+			return err
 		}
 		for _, m := range members {
 			m.GroupID = g.ID
 			m.ID = fmt.Sprintf("%d_%s", m.GroupID, m.UserID)
 		}
-
-		if err := WrapFunc(dbSetNxGroupMember)(func(err2 error) {
-			if err != nil {
-				log.Error(err)
-				u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
-				_ = taskPool.Submit(func() { _ = dbDeleteGroup(g.ID) })
-				return
-			}
-			g.AddMember(members)
-			addGroup(g)
-
-			group := g.Pack()
-			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{
-				Code:  pb.ErrCode_OK,
-				Group: group,
-			})
-
-			notify := &pb.NotifyInvited{
-				Group:  group,
-				InitBy: u.ID,
-			}
-			g.Broadcast(notify, u.ID)
-		}, members); err != nil {
-			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Busy})
+		if err := dbSetNxGroupMember(members); err != nil {
+			_ = dbDeleteGroup(g.ID)
+			return err
 		}
-	}, g); err != nil {
+		return nil
+	}
+
+	if err := WrapFunc(f)(func(err error) {
+		if err != nil {
+			log.Error(err)
+			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
+			return
+		}
+		g.AddMember(members)
+		addGroup(g)
+
+		group := g.Pack()
+		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{
+			Code:  pb.ErrCode_OK,
+			Group: group,
+		})
+
+		notify := &pb.NotifyInvited{
+			Group:  group,
+			InitBy: u.ID,
+		}
+		g.Broadcast(notify, u.ID)
+	}, g, members); err != nil {
 		log.Error(err)
 		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Busy})
 	}
+
 }
 
 func onGetGroupList(u *User, msg *Message) {
