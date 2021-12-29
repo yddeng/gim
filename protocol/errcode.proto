@@ -1,6 +1,8 @@
 syntax = "proto2";
 option go_package = "protocol";
 
+package message.IM;
+
 enum ErrCode{
     OK               = 0; // 请求成功
     Error            = 1; // 服务错误
