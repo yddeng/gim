@@ -1,4 +1,4 @@
-Address           = "127.0.0.1:43210"
+Address           = "10.128.2.123:43210"
 MaxConnCount      = 5000             # 最大用户链接数
 HeartbeatTimeout  = 10               # 心跳超时时间，单位秒。
 MaxBackups        = 3                # 聊天记录保留的表数量

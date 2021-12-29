@@ -8,6 +8,8 @@ enum CmdType {
     CmdUserLoginReq  = 1;
     CmdUserLoginResp = 2;
     CmdHeartbeat     = 3;
+    CmdGetUserInfoReq     = 4;
+    CmdGetUserInfoResp    = 5;
 
     CmdCreateGroupReq  = 101;
     CmdCreateGroupResp = 102;

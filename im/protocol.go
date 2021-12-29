@@ -161,6 +161,8 @@ func init() {
 	register(&protocol.Heartbeat{}, uint16(protocol.CmdType_CmdHeartbeat))
 	register(&protocol.UserLoginReq{}, uint16(protocol.CmdType_CmdUserLoginReq))
 	register(&protocol.UserLoginResp{}, uint16(protocol.CmdType_CmdUserLoginResp))
+	register(&protocol.GetUserInfoReq{}, uint16(protocol.CmdType_CmdGetUserInfoReq))
+	register(&protocol.GetUserInfoResp{}, uint16(protocol.CmdType_CmdGetUserInfoResp))
 
 	register(&protocol.CreateGroupReq{}, uint16(protocol.CmdType_CmdCreateGroupReq))
 	register(&protocol.CreateGroupResp{}, uint16(protocol.CmdType_CmdCreateGroupResp))

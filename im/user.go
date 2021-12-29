@@ -66,6 +66,13 @@ type User struct {
 	sess dnet.Session
 }
 
+func (this *User) Pack() *protocol.User {
+	return &protocol.User{
+		ID:     proto.String(this.ID),
+		Extras: this.Extra,
+	}
+}
+
 func (this *User) online() bool {
 	return this.sess != nil
 }
@@ -128,6 +135,21 @@ func onUserLogin(sess dnet.Session, msg *Message) {
 	sess.SetContext(u)
 
 	u.SendToClient(msg.GetSeq(), &protocol.UserLoginResp{Code: protocol.ErrCode_OK.Enum()})
+}
+
+func onGetUserInfo(u *User, msg *Message) {
+	req := msg.GetData().(*protocol.GetUserInfoReq)
+	log.Infof("onGetUserInfo %v", req)
+
+	resp := &protocol.GetUserInfoResp{
+		Users: make([]*protocol.User, 0, len(req.GetUserIDs())),
+	}
+	for _, uID := range req.GetUserIDs() {
+		if user := GetUser(uID); user != nil {
+			resp.Users = append(resp.Users, user.Pack())
+		}
+	}
+	u.SendToClient(msg.GetSeq(), resp)
 }
 
 func dbLoadUser(key string) (*User, error) {

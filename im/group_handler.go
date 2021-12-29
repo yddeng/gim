@@ -532,4 +532,6 @@ func init() {
 
 	registerHandler(uint16(protocol.CmdType_CmdSendMessageReq), onSendMessage)
 	registerHandler(uint16(protocol.CmdType_CmdSyncMessageReq), onSyncMessage)
+
+	registerHandler(uint16(protocol.CmdType_CmdGetUserInfoReq), onGetUserInfo)
 }

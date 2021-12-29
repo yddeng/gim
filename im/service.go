@@ -37,7 +37,7 @@ func StartWSGateway(address string) error {
 
 func createSession(conn net.Conn) dnet.Session {
 	return dnet.NewTCPSession(conn,
-		dnet.WithTimeout(time.Second*time.Duration(config.HeartbeatTimeout), 0),
+		//dnet.WithTimeout(time.Second*time.Duration(config.HeartbeatTimeout), 0),
 		dnet.WithCodec(Codec{}),
 		//dnet.WithErrorCallback(func(session dnet.Session, err error) {
 		//	fmt.Println("onError", err)

@@ -29,7 +29,8 @@ func dispatchMessage(sess dnet.Session, msg *im.Message) {
 }
 
 func main() {
-	address := "127.0.0.1:43210"
+	//address := "10.128.2.123:43210"
+	address := "81.69.172.73:41210"
 	c, err := dnet.DialTCP(address, 0)
 	if err != nil {
 		panic(err)
@@ -60,7 +61,8 @@ func main() {
 
 	userID := os.Args[1]
 	if err := sess.Send(im.NewMessage(1, &protocol.UserLoginReq{
-		ID: proto.String(userID),
+		ID:     proto.String(userID),
+		Extras: []*protocol.Extra{{Key: proto.String(userID), Value: proto.String(userID)}},
 	})); err != nil {
 		panic(err)
 	}
@@ -131,6 +133,9 @@ func main() {
 	registerHandler(protocol.CmdType_CmdGetFriendsResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("GetFriendsResp %v", msg.GetData().(*protocol.GetFriendsResp))
 	})
+	registerHandler(protocol.CmdType_CmdGetUserInfoResp, func(session dnet.Session, msg *im.Message) {
+		log.Debugf("GetUserInfoResp %v", msg.GetData().(*protocol.GetUserInfoResp))
+	})
 
 	go func() {
 		for {
@@ -142,7 +147,7 @@ func main() {
 
 func cmd(sess dnet.Session) {
 	fmt.Println("1:createGroup 2:addMember 3:removeMember 4:join 5:quit 6:send 7:getMembers 8:syncMessage 9:getGroupList")
-	fmt.Println("11:addFriend 12:agreeFriend 13:getFriends 14:deleteFriend")
+	fmt.Println("11:addFriend 12:agreeFriend 13:getFriends 14:deleteFriend 15:getUserInfo")
 	fmt.Printf("==>")
 	var k int
 	fmt.Scan(&k)
@@ -244,6 +249,13 @@ func cmd(sess dnet.Session) {
 		fmt.Scan(&userID)
 		_ = sess.Send(im.NewMessage(0, &protocol.DeleteFriendReq{
 			UserID: proto.String(userID),
+		}))
+	case 15:
+		fmt.Printf("Send userID:")
+		var userID string
+		fmt.Scan(&userID)
+		_ = sess.Send(im.NewMessage(0, &protocol.GetUserInfoReq{
+			UserIDs: []string{userID},
 		}))
 	}
 }

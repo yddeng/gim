@@ -1,7 +1,9 @@
 syntax = "proto2";
 option go_package = "protocol";
 package message.IM;
+
 import "protocol/errcode.proto";
+import "protocol/user.proto";
 
 enum FriendStatus{
     Agree = 0; // 好友状态
@@ -11,7 +13,6 @@ enum FriendStatus{
 message Friend{
     optional FriendStatus status = 1;
     optional string       userID = 2;
-    repeated Extra        extras = 3;// 附加属性
 }
 
 message AddFriendReq{

@@ -15,3 +15,15 @@ message UserLoginResp{
 message Heartbeat{
     optional int64 timestamp = 1;
 }
+
+message User{
+    required string ID = 1;
+    repeated Extra extras = 2;// 附加属性
+}
+
+message GetUserInfoReq{
+    repeated string userIDs = 1;
+}
+message GetUserInfoResp{
+    repeated User users = 1;
+}
