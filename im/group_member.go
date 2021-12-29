@@ -2,7 +2,8 @@ package im
 
 import (
 	"fmt"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/yddeng/gim/im/protocol"
 	"strings"
 )
 
@@ -17,22 +18,22 @@ type Member struct {
 	Role     int // 会话角色
 }
 
-func (this *Member) Pack() *pb.Member {
-	msg := &pb.Member{
-		UserID:   this.UserID,
-		Nickname: this.Nickname,
-		Mute:     this.Mute == 1,
-		Role:     int32(this.Role),
-		CreateAt: this.CreateAt,
-		UpdateAt: this.UpdateAt,
-		Online:   false,
+func (this *Member) Pack() *protocol.Member {
+	msg := &protocol.Member{
+		UserID:   proto.String(this.UserID),
+		Nickname: proto.String(this.Nickname),
+		Mute:     proto.Bool(this.Mute == 1),
+		Role:     proto.Int32(int32(this.Role)),
+		CreateAt: proto.Int64(this.CreateAt),
+		UpdateAt: proto.Int64(this.UpdateAt),
+		Online:   proto.Bool(false),
 	}
 
 	v, ok := userCache.Get(this.UserID)
 	if ok {
 		u := v.(*cacheUser).u
 		if u != nil && u.online() {
-			msg.Online = true
+			msg.Online = proto.Bool(true)
 		}
 	}
 	return msg

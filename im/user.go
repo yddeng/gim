@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 	"time"
@@ -61,7 +61,7 @@ type User struct {
 	ID       string
 	CreateAt int64
 	UpdateAt int64
-	Extra    map[string]string // 附加属性
+	Extra    []*protocol.Extra // 附加属性
 	//Groups   map[int64]*Member // 会话列表
 	sess dnet.Session
 }
@@ -69,6 +69,15 @@ type User struct {
 func (this *User) online() bool {
 	return this.sess != nil
 }
+
+//func(this *User)SendMessage (msg *Message)  {
+//	if this.sess == nil {
+//		return
+//	}
+//	if err := this.sess.Send(msg); err != nil {
+//		this.sess.Close(err)
+//	}
+//}
 
 func (this *User) SendToClient(seq uint32, msg proto.Message) {
 	if this.sess == nil {
@@ -80,13 +89,13 @@ func (this *User) SendToClient(seq uint32, msg proto.Message) {
 }
 
 func onUserLogin(sess dnet.Session, msg *Message) {
-	req := msg.GetData().(*pb.UserLoginReq)
+	req := msg.GetData().(*protocol.UserLoginReq)
 	log.Infof("onUserLogin %v", req)
 
 	id := req.GetID()
 	ctx := sess.Context()
 	if ctx != nil {
-		_ = sess.Send(NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_UserAlreadyLogin}))
+		_ = sess.Send(NewMessage(msg.GetSeq(), &protocol.UserLoginResp{Code: protocol.ErrCode_UserAlreadyLogin.Enum()}))
 		return
 	}
 
@@ -106,19 +115,19 @@ func onUserLogin(sess dnet.Session, msg *Message) {
 	}
 
 	u.UpdateAt = nowUnix
-	u.Extra = req.GetExtra()
+	u.Extra = req.GetExtras()
 	u.sess = sess
 
 	if err := dbSetNxUser(u); err != nil {
 		log.Error(err)
-		_ = sess.Send(NewMessage(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_Error}))
+		_ = sess.Send(NewMessage(msg.GetSeq(), &protocol.UserLoginResp{Code: protocol.ErrCode_Error.Enum()}))
 		return
 	}
 
 	addUser(u)
 	sess.SetContext(u)
 
-	u.SendToClient(msg.GetSeq(), &pb.UserLoginResp{Code: pb.ErrCode_OK})
+	u.SendToClient(msg.GetSeq(), &protocol.UserLoginResp{Code: protocol.ErrCode_OK.Enum()})
 }
 
 func dbLoadUser(key string) (*User, error) {

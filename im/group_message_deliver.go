@@ -3,7 +3,7 @@ package im
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"sort"
 	"strings"
 	"time"
@@ -22,7 +22,7 @@ type MessageDeliver struct {
 }
 
 type groupMessage struct {
-	messages map[int64]*pb.MessageInfo
+	messages map[int64]*protocol.MessageInfo
 }
 
 func (this *groupMessage) gc(maxCount int) {
@@ -90,7 +90,7 @@ func (this *MessageDeliver) makeTableName() string {
 	return "message_" + time.Now().Format("20060102")
 }
 
-func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) error {
+func (this *MessageDeliver) pushMessage(groupID int64, msg *protocol.MessageInfo) error {
 	tableName := this.makeTableName()
 	if this.tableName != tableName {
 		if err := this.dbCreateTableMessage(tableName); err != nil {
@@ -118,7 +118,7 @@ func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) erro
 	gm, ok := this.groupMessage[groupID]
 	if !ok {
 		gm = &groupMessage{
-			messages: make(map[int64]*pb.MessageInfo, this.maxMessageCount),
+			messages: make(map[int64]*protocol.MessageInfo, this.maxMessageCount),
 		}
 		this.groupMessage[groupID] = gm
 	}
@@ -128,16 +128,16 @@ func (this *MessageDeliver) pushMessage(groupID int64, msg *pb.MessageInfo) erro
 	return nil
 }
 
-func (this *MessageDeliver) loadMessage(groupID int64, ids []int64) ([]*pb.MessageInfo, error) {
+func (this *MessageDeliver) loadMessage(groupID int64, ids []int64) ([]*protocol.MessageInfo, error) {
 	gm, ok := this.groupMessage[groupID]
 	if !ok {
 		gm = &groupMessage{
-			messages: make(map[int64]*pb.MessageInfo, this.maxMessageCount),
+			messages: make(map[int64]*protocol.MessageInfo, this.maxMessageCount),
 		}
 		this.groupMessage[groupID] = gm
 	}
 
-	infos := make([]*pb.MessageInfo, 0, len(ids))
+	infos := make([]*protocol.MessageInfo, 0, len(ids))
 	finds := make([]int64, 0, len(ids))
 	for _, id := range ids {
 		if v, ok := gm.messages[id]; ok {
@@ -237,7 +237,7 @@ func (this *MessageDeliver) dbDropTableMessage(tables []string) error {
 	return err
 }
 
-func (this *MessageDeliver) dbSetNxMessage(groupID int64, msg *pb.MessageInfo, tableName string) error {
+func (this *MessageDeliver) dbSetNxMessage(groupID int64, msg *protocol.MessageInfo, tableName string) error {
 	sqlStr := `
 INSERT INTO "%s" (id,group_id,message_id,message)  
 VALUES ($1,$2,$3,$4)
@@ -251,7 +251,7 @@ UPDATE SET message = $4;`
 	return err
 }
 
-func (this *MessageDeliver) dbLoadMessageBatch(groupID int64, ids []int64, tableName string) ([]*pb.MessageInfo, error) {
+func (this *MessageDeliver) dbLoadMessageBatch(groupID int64, ids []int64, tableName string) ([]*protocol.MessageInfo, error) {
 	sqlStr := `
 SELECT message FROM "%s" 
 WHERE %s;`
@@ -269,10 +269,10 @@ WHERE %s;`
 		return nil, err
 	}
 
-	infos := make([]*pb.MessageInfo, 0, len(ids))
+	infos := make([]*protocol.MessageInfo, 0, len(ids))
 	defer rows.Close()
 	for rows.Next() {
-		var info pb.MessageInfo
+		var info protocol.MessageInfo
 		var data []byte
 		err = rows.Scan(&data)
 		if err != nil {

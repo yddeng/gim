@@ -3,8 +3,9 @@ package im
 import (
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/yddeng/dnet"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 	"github.com/yddeng/utils/task"
@@ -80,9 +81,9 @@ func registerHandler(cmd uint16, h func(*User, *Message)) {
 func dispatchMessage(session dnet.Session, msg *Message) {
 	cmd := msg.GetCmd()
 	switch cmd {
-	case uint16(pb.CmdType_CmdHeartbeat):
-		_ = session.Send(NewMessage(msg.GetSeq(), &pb.Heartbeat{Timestamp: time.Now().Unix()}))
-	case uint16(pb.CmdType_CmdUserLoginReq):
+	case uint16(protocol.CmdType_CmdHeartbeat):
+		_ = session.Send(NewMessage(msg.GetSeq(), &protocol.Heartbeat{Timestamp: proto.Int64(time.Now().Unix())}))
+	case uint16(protocol.CmdType_CmdUserLoginReq):
 		onUserLogin(session, msg)
 	default:
 		if h, ok := msgHandler[cmd]; ok {
@@ -137,6 +138,7 @@ func Service(cfgPath string) {
 	userCache = lru.New(config.MaxConnCount * 2)
 	userCache.OnEvicted = onUserEvicted
 	groupCache = lru.New(config.MaxConnCount)
+	friendCache = lru.New(config.MaxConnCount * 2)
 
 	log.Infof("task queue channel size is %d. ", config.MaxTaskCount)
 	taskQueue = NewTaskQueue(config.MaxTaskCount * 2)

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"github.com/yddeng/utils/log"
 	"github.com/yddeng/utils/lru"
 )
@@ -50,23 +50,23 @@ func removeGroup(groupID int64) {
 }
 
 type Group struct {
-	Type          pb.GroupType      // 对话类型
-	ID            int64             // 全局唯一ID
-	Creator       string            // 对话创建者
-	CreateAt      int64             // 创建时间戳 秒
-	Extra         map[string]string // 附加属性
-	LastMessageAt int64             // 最后一条消息的时间
-	LastMessageID int64             // 最后一条消息的ID
+	Type          protocol.GroupType // 对话类型
+	ID            int64              // 全局唯一ID
+	Creator       string             // 对话创建者
+	CreateAt      int64              // 创建时间戳 秒
+	Extra         []*protocol.Extra  // 附加属性
+	LastMessageAt int64              // 最后一条消息的时间
+	LastMessageID int64              // 最后一条消息的ID
 	Members       map[string]*Member
 	deleting      bool // 正在移除
 }
 
-func (this *Group) Pack() *pb.Group {
-	g := &pb.Group{
-		Type:          this.Type,
-		ID:            this.ID,
-		LastMessageAt: this.LastMessageAt,
-		LastMessageID: this.LastMessageID,
+func (this *Group) Pack() *protocol.Group {
+	g := &protocol.Group{
+		Type:          this.Type.Enum(),
+		ID:            proto.Int64(this.ID),
+		LastMessageAt: proto.Int64(this.LastMessageAt),
+		LastMessageID: proto.Int64(this.LastMessageID),
 	}
 
 	return g

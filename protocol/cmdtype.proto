@@ -1,5 +1,5 @@
-syntax = "proto3";
-option go_package = "pb";
+syntax = "proto2";
+option go_package = "protocol";
 
 enum CmdType {
     CmdNone = 0;
@@ -48,4 +48,8 @@ enum CmdType {
     CmdGetFriendsResp  = 406;
     CmdNotifyAddFriend   = 407;
     CmdNotifyAgreeFriend = 408;
+    CmdDeleteFriendReq  = 409;
+    CmdDeleteFriendResp  = 410;
+    CmdNotifyDeleteFriend  = 411;
 }
+

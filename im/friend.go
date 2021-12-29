@@ -28,11 +28,11 @@ func GetFriends(userID string) map[string]*Friend {
 	}
 }
 
-func addFriend(userID string, f *Friend) {
+func addFriend(userID, friendID string, f *Friend) {
 	c, ok := friendCache.Get(userID)
 	if ok {
 		cf := c.(*cacheFriend)
-		cf.fs[userID] = f
+		cf.fs[friendID] = f
 	}
 }
 

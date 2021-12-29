@@ -1,7 +1,7 @@
 package im
 
 import (
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"testing"
 	"time"
 )
@@ -33,7 +33,7 @@ func TestUser(t *testing.T) {
 func TestGroup(t *testing.T) {
 	startService()
 	conv := &Group{
-		Type:     pb.GroupType_Normal,
+		Type:     protocol.GroupType_Normal,
 		ID:       0,
 		Creator:  "ydd",
 		CreateAt: time.Now().Unix(),

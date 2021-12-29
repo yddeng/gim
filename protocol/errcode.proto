@@ -1,5 +1,5 @@
-syntax = "proto3";
-option go_package = "pb";
+syntax = "proto2";
+option go_package = "protocol";
 
 enum ErrCode{
     OK               = 0; // 请求成功
@@ -14,4 +14,9 @@ enum ErrCode{
 
     FriendAlreadyIsFriend       = 1101; // 已经是好友
     FriendApplyClosed           = 1102; // 申请已撤销
+}
+
+message Extra{
+    required string key   = 1;
+    required string value = 2;
 }

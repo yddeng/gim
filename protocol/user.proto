@@ -1,17 +1,17 @@
-syntax = "proto3";
-option go_package = "pb";
+syntax = "proto2";
+option go_package = "protocol";
 
-import "errcode.proto";
+import "protocol/errcode.proto";
 
 message UserLoginReq{
-    string ID = 1;
-    map<string,string> extra = 2; // 附加属性
+    required string ID = 1;
+    repeated Extra extras = 2;// 附加属性
 }
 
 message UserLoginResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
 }
 
 message Heartbeat{
-    int64 timestamp = 1;
+    optional int64 timestamp = 1;
 }

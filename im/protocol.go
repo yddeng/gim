@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/yddeng/gim/im/protocol"
 	"io"
 	"reflect"
 )
@@ -33,36 +33,39 @@ func (this *Message) GetSeq() uint32 {
 }
 
 const (
-	seqSize       = 4
-	cmdSize       = 2
-	bodySize      = 4
-	HeadSize      = seqSize + cmdSize + bodySize
-	MaxBufferSize = 64 * 1024
+	SizeLen   = 2
+	SizeSeq   = 4
+	SizeFlag  = 2
+	SizeCmd   = 2
+	SizeTeach = 2 // 教学引导ID
+	SizeErr   = 2
+	SizeHead  = SizeLen + SizeSeq + SizeFlag + SizeCmd + SizeTeach + SizeErr
 )
 
 type Codec struct{}
 
-func readHeader(buff []byte) (uint32, uint16, uint32) {
-	var seq, length uint32
-	var cmd uint16
+func readHeader(buff []byte) (uint16, uint32, uint16) {
+	var seq uint32
+	var cmd, length uint16
 
 	buffer := bytes.NewBuffer(buff)
+	binary.Read(buffer, binary.BigEndian, &length)
 	binary.Read(buffer, binary.BigEndian, &seq)
 	binary.Read(buffer, binary.BigEndian, &cmd)
-	binary.Read(buffer, binary.BigEndian, &length)
+	binary.Read(buffer, binary.BigEndian, &cmd)
 
-	return seq, cmd, length
+	return length - (SizeHead - SizeLen), seq, cmd
 }
 
 //解码
 func (_ Codec) Decode(reader io.Reader) (interface{}, error) {
-	hdr := make([]byte, HeadSize)
+	hdr := make([]byte, SizeHead)
 	if _, err := io.ReadFull(reader, hdr); err != nil {
 		return nil, err
 	}
 
-	seq, cmd, length := readHeader(hdr)
-	if length < 0 || length >= MaxBufferSize {
+	length, seq, cmd := readHeader(hdr)
+	if length < 0 {
 		return nil, fmt.Errorf("Message too large. ")
 	}
 
@@ -93,19 +96,24 @@ func (_ Codec) Encode(o interface{}) ([]byte, error) {
 	switch o.(type) {
 	case *Message:
 		msg := o.(*Message)
+		seqNo = msg.seq
 		cmd, data, err = marshal(msg.GetData())
 		if err != nil {
 			return nil, err
 		}
+
 	default:
 		return nil, fmt.Errorf("invalid type:%s. ", reflect.TypeOf(o).String())
 	}
 
-	length := uint32(len(data))
+	length := uint16(len(data))
 	buffer := new(bytes.Buffer)
+	binary.Write(buffer, binary.BigEndian, uint16(length+(SizeHead-SizeLen)))
 	binary.Write(buffer, binary.BigEndian, seqNo)
+	binary.Write(buffer, binary.BigEndian, uint16(0))
 	binary.Write(buffer, binary.BigEndian, cmd)
-	binary.Write(buffer, binary.BigEndian, length)
+	binary.Write(buffer, binary.BigEndian, uint16(0))
+	binary.Write(buffer, binary.BigEndian, uint16(0))
 	buffer.Write(data)
 
 	return buffer.Bytes(), nil
@@ -150,49 +158,52 @@ func unmarshal(cmd uint16, buff []byte) (interface{}, error) {
 }
 
 func init() {
-	register(&pb.Heartbeat{}, uint16(pb.CmdType_CmdHeartbeat))
-	register(&pb.UserLoginReq{}, uint16(pb.CmdType_CmdUserLoginReq))
-	register(&pb.UserLoginResp{}, uint16(pb.CmdType_CmdUserLoginResp))
+	register(&protocol.Heartbeat{}, uint16(protocol.CmdType_CmdHeartbeat))
+	register(&protocol.UserLoginReq{}, uint16(protocol.CmdType_CmdUserLoginReq))
+	register(&protocol.UserLoginResp{}, uint16(protocol.CmdType_CmdUserLoginResp))
 
-	register(&pb.CreateGroupReq{}, uint16(pb.CmdType_CmdCreateGroupReq))
-	register(&pb.CreateGroupResp{}, uint16(pb.CmdType_CmdCreateGroupResp))
-	register(&pb.GetGroupListReq{}, uint16(pb.CmdType_CmdGetGroupListReq))
-	register(&pb.GetGroupListResp{}, uint16(pb.CmdType_CmdGetGroupListResp))
-	register(&pb.DissolveGroupReq{}, uint16(pb.CmdType_CmdDissolveGroupReq))
-	register(&pb.DissolveGroupResp{}, uint16(pb.CmdType_CmdDissolveGroupResp))
-	register(&pb.NotifyDissolveGroup{}, uint16(pb.CmdType_CmdNotifyDissolveGroup))
+	register(&protocol.CreateGroupReq{}, uint16(protocol.CmdType_CmdCreateGroupReq))
+	register(&protocol.CreateGroupResp{}, uint16(protocol.CmdType_CmdCreateGroupResp))
+	register(&protocol.GetGroupListReq{}, uint16(protocol.CmdType_CmdGetGroupListReq))
+	register(&protocol.GetGroupListResp{}, uint16(protocol.CmdType_CmdGetGroupListResp))
+	register(&protocol.DissolveGroupReq{}, uint16(protocol.CmdType_CmdDissolveGroupReq))
+	register(&protocol.DissolveGroupResp{}, uint16(protocol.CmdType_CmdDissolveGroupResp))
+	register(&protocol.NotifyDissolveGroup{}, uint16(protocol.CmdType_CmdNotifyDissolveGroup))
 
-	register(&pb.AddMemberReq{}, uint16(pb.CmdType_CmdAddMemberReq))
-	register(&pb.AddMemberResp{}, uint16(pb.CmdType_CmdAddMemberResp))
-	register(&pb.RemoveMemberReq{}, uint16(pb.CmdType_CmdRemoveMemberReq))
-	register(&pb.RemoveMemberResp{}, uint16(pb.CmdType_CmdRemoveMemberResp))
-	register(&pb.JoinReq{}, uint16(pb.CmdType_CmdJoinReq))
-	register(&pb.JoinResp{}, uint16(pb.CmdType_CmdJoinResp))
-	register(&pb.QuitReq{}, uint16(pb.CmdType_CmdQuitReq))
-	register(&pb.QuitResp{}, uint16(pb.CmdType_CmdQuitResp))
-	register(&pb.NotifyMemberJoined{}, uint16(pb.CmdType_CmdNotifyMemberJoined))
-	register(&pb.NotifyMemberLeft{}, uint16(pb.CmdType_CmdNotifyMemberLeft))
-	register(&pb.NotifyInvited{}, uint16(pb.CmdType_CmdNotifyInvited))
-	register(&pb.NotifyKicked{}, uint16(pb.CmdType_CmdNotifyKicked))
-	register(&pb.GetGroupMembersReq{}, uint16(pb.CmdType_CmdGetGroupMembersReq))
-	register(&pb.GetGroupMembersResp{}, uint16(pb.CmdType_CmdGetGroupMembersResp))
+	register(&protocol.AddMemberReq{}, uint16(protocol.CmdType_CmdAddMemberReq))
+	register(&protocol.AddMemberResp{}, uint16(protocol.CmdType_CmdAddMemberResp))
+	register(&protocol.RemoveMemberReq{}, uint16(protocol.CmdType_CmdRemoveMemberReq))
+	register(&protocol.RemoveMemberResp{}, uint16(protocol.CmdType_CmdRemoveMemberResp))
+	register(&protocol.JoinReq{}, uint16(protocol.CmdType_CmdJoinReq))
+	register(&protocol.JoinResp{}, uint16(protocol.CmdType_CmdJoinResp))
+	register(&protocol.QuitReq{}, uint16(protocol.CmdType_CmdQuitReq))
+	register(&protocol.QuitResp{}, uint16(protocol.CmdType_CmdQuitResp))
+	register(&protocol.NotifyMemberJoined{}, uint16(protocol.CmdType_CmdNotifyMemberJoined))
+	register(&protocol.NotifyMemberLeft{}, uint16(protocol.CmdType_CmdNotifyMemberLeft))
+	register(&protocol.NotifyInvited{}, uint16(protocol.CmdType_CmdNotifyInvited))
+	register(&protocol.NotifyKicked{}, uint16(protocol.CmdType_CmdNotifyKicked))
+	register(&protocol.GetGroupMembersReq{}, uint16(protocol.CmdType_CmdGetGroupMembersReq))
+	register(&protocol.GetGroupMembersResp{}, uint16(protocol.CmdType_CmdGetGroupMembersResp))
 
-	register(&pb.SendMessageReq{}, uint16(pb.CmdType_CmdSendMessageReq))
-	register(&pb.SendMessageResp{}, uint16(pb.CmdType_CmdSendMessageResp))
-	register(&pb.NotifyMessage{}, uint16(pb.CmdType_CmdNotifyMessage))
-	register(&pb.SyncMessageReq{}, uint16(pb.CmdType_CmdSyncMessageReq))
-	register(&pb.SyncMessageResp{}, uint16(pb.CmdType_CmdSyncMessageResp))
-	register(&pb.RecallMessageReq{}, uint16(pb.CmdType_CmdRecallMessageReq))
-	register(&pb.RecallMessageResp{}, uint16(pb.CmdType_CmdRecallMessageResp))
-	register(&pb.NotifyRecallMessage{}, uint16(pb.CmdType_CmdNotifyRecallMessage))
+	register(&protocol.SendMessageReq{}, uint16(protocol.CmdType_CmdSendMessageReq))
+	register(&protocol.SendMessageResp{}, uint16(protocol.CmdType_CmdSendMessageResp))
+	register(&protocol.NotifyMessage{}, uint16(protocol.CmdType_CmdNotifyMessage))
+	register(&protocol.SyncMessageReq{}, uint16(protocol.CmdType_CmdSyncMessageReq))
+	register(&protocol.SyncMessageResp{}, uint16(protocol.CmdType_CmdSyncMessageResp))
+	register(&protocol.RecallMessageReq{}, uint16(protocol.CmdType_CmdRecallMessageReq))
+	register(&protocol.RecallMessageResp{}, uint16(protocol.CmdType_CmdRecallMessageResp))
+	register(&protocol.NotifyRecallMessage{}, uint16(protocol.CmdType_CmdNotifyRecallMessage))
 
-	register(&pb.AddFriendReq{}, uint16(pb.CmdType_CmdAddFriendReq))
-	register(&pb.AddFriendResp{}, uint16(pb.CmdType_CmdAddFriendResp))
-	register(&pb.AgreeFriendReq{}, uint16(pb.CmdType_CmdAgreeFriendReq))
-	register(&pb.AgreeFriendResp{}, uint16(pb.CmdType_CmdAgreeFriendResp))
-	register(&pb.GetFriendsReq{}, uint16(pb.CmdType_CmdGetFriendsReq))
-	register(&pb.GetFriendsResp{}, uint16(pb.CmdType_CmdGetFriendsResp))
-	register(&pb.NotifyAddFriend{}, uint16(pb.CmdType_CmdNotifyAddFriend))
-	register(&pb.NotifyAgreeFriend{}, uint16(pb.CmdType_CmdNotifyAgreeFriend))
+	register(&protocol.AddFriendReq{}, uint16(protocol.CmdType_CmdAddFriendReq))
+	register(&protocol.AddFriendResp{}, uint16(protocol.CmdType_CmdAddFriendResp))
+	register(&protocol.AgreeFriendReq{}, uint16(protocol.CmdType_CmdAgreeFriendReq))
+	register(&protocol.AgreeFriendResp{}, uint16(protocol.CmdType_CmdAgreeFriendResp))
+	register(&protocol.GetFriendsReq{}, uint16(protocol.CmdType_CmdGetFriendsReq))
+	register(&protocol.GetFriendsResp{}, uint16(protocol.CmdType_CmdGetFriendsResp))
+	register(&protocol.NotifyAddFriend{}, uint16(protocol.CmdType_CmdNotifyAddFriend))
+	register(&protocol.NotifyAgreeFriend{}, uint16(protocol.CmdType_CmdNotifyAgreeFriend))
+	register(&protocol.DeleteFriendReq{}, uint16(protocol.CmdType_CmdDeleteFriendReq))
+	register(&protocol.DeleteFriendResp{}, uint16(protocol.CmdType_CmdDeleteFriendResp))
+	register(&protocol.NotifyDeleteFriend{}, uint16(protocol.CmdType_CmdNotifyDeleteFriend))
 
 }

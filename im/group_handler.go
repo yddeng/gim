@@ -2,20 +2,21 @@ package im
 
 import (
 	"fmt"
-	"github.com/yddeng/gim/im/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/yddeng/gim/im/protocol"
 	"github.com/yddeng/utils/log"
 	"time"
 )
 
 func onCreateGroup(u *User, msg *Message) {
-	req := msg.GetData().(*pb.CreateGroupReq)
+	req := msg.GetData().(*protocol.CreateGroupReq)
 	log.Debugf("user(%s) onCreateGroup %v", u.ID, req)
 
 	nowUnix := time.Now().Unix()
 	g := &Group{
-		Type:     pb.GroupType_Normal,
+		Type:     protocol.GroupType_Normal,
 		Creator:  u.ID,
-		Extra:    req.GetExtra(),
+		Extra:    req.GetExtras(),
 		CreateAt: nowUnix,
 		Members:  make(map[string]*Member, 16),
 	}
@@ -31,7 +32,7 @@ func onCreateGroup(u *User, msg *Message) {
 	}
 
 	if len(members) < 2 {
-		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_RequestArgumentErr})
+		u.SendToClient(msg.GetSeq(), &protocol.CreateGroupResp{Code: protocol.ErrCode_RequestArgumentErr.Enum()})
 		return
 	}
 
@@ -53,42 +54,42 @@ func onCreateGroup(u *User, msg *Message) {
 	if err := WrapFunc(f)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.CreateGroupResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 		g.AddMember(members)
 		addGroup(g)
 
 		group := g.Pack()
-		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{
-			Code:  pb.ErrCode_OK,
+		u.SendToClient(msg.GetSeq(), &protocol.CreateGroupResp{
+			Code:  protocol.ErrCode_OK.Enum(),
 			Group: group,
 		})
 
-		notify := &pb.NotifyInvited{
+		notify := &protocol.NotifyInvited{
 			Group:  group,
-			InitBy: u.ID,
+			InitBy: proto.String(u.ID),
 		}
 		g.Broadcast(notify, u.ID)
 	}, g, members); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.CreateGroupResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.CreateGroupResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 
 }
 
 func onGetGroupList(u *User, msg *Message) {
-	//req := msg.GetData().(*pb.GetGroupListReq)
+	//req := msg.GetData().(*protocol.GetGroupListReq)
 	//log.Debugf("user(%s) onGetGroupList %v", u.ID, req)
 	if err := WrapFunc(dbGetUserGroups)(func(groups map[int64]*Member, err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.GetGroupListResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.GetGroupListResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 
-		resp := &pb.GetGroupListResp{
-			Groups: make([]*pb.Group, 0, len(groups)),
+		resp := &protocol.GetGroupListResp{
+			Groups: make([]*protocol.Group, 0, len(groups)),
 		}
 
 		for id := range groups {
@@ -101,25 +102,25 @@ func onGetGroupList(u *User, msg *Message) {
 		u.SendToClient(msg.GetSeq(), resp)
 	}, u.ID); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.GetGroupListResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.GetGroupListResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func onDissolveGroup(u *User, msg *Message) {
-	req := msg.GetData().(*pb.DissolveGroupReq)
+	req := msg.GetData().(*protocol.DissolveGroupReq)
 	log.Debugf("user(%s) onDissolveGroup %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	if m, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	} else if m.Role != 1 {
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_UserNotHasPermission})
+		u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_UserNotHasPermission.Enum()})
 		return
 	}
 
@@ -128,12 +129,12 @@ func onDissolveGroup(u *User, msg *Message) {
 		if err != nil {
 			g.deleting = false
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
-		notifyDissolve := &pb.NotifyDissolveGroup{
-			GroupID: g.ID,
-			InitBy:  u.ID,
+		notifyDissolve := &protocol.NotifyDissolveGroup{
+			GroupID: proto.Int64(g.ID),
+			InitBy:  proto.String(u.ID),
 		}
 		members := make([]*Member, 0, len(g.Members))
 		for uId, m := range g.Members {
@@ -142,27 +143,27 @@ func onDissolveGroup(u *User, msg *Message) {
 		}
 
 		removeGroup(g.ID)
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_OK})
+		u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_OK.Enum()})
 		_ = taskPool.Submit(func() { _ = dbDelGroupMember(members) })
 
 	}, g.ID); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.DissolveGroupResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.DissolveGroupResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func onAddMember(u *User, msg *Message) {
-	req := msg.GetData().(*pb.AddMemberReq)
+	req := msg.GetData().(*protocol.AddMemberReq)
 	log.Debugf("user(%s) onAddMember %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	if _, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	}
 
@@ -189,23 +190,23 @@ func onAddMember(u *User, msg *Message) {
 	}
 
 	if len(members) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
+		u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_OK.Enum(), ExistIds: existIds})
 		return
 	}
 
 	if err := WrapFunc(dbSetNxGroupMember)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 		g.AddMember(members)
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_OK, ExistIds: existIds})
+		u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_OK.Enum(), ExistIds: existIds})
 
 		group := g.Pack()
-		notifyInvited := &pb.NotifyInvited{
+		notifyInvited := &protocol.NotifyInvited{
 			Group:  group,
-			InitBy: u.ID,
+			InitBy: proto.String(u.ID),
 		}
 
 		for _, m := range members {
@@ -213,38 +214,38 @@ func onAddMember(u *User, msg *Message) {
 		}
 
 		// 通知给群里其他人
-		notifyJoined := &pb.NotifyMemberJoined{
+		notifyJoined := &protocol.NotifyMemberJoined{
 			Group:   group,
 			JoinIds: addIds,
-			InitBy:  u.ID,
+			InitBy:  proto.String(u.ID),
 		}
 		g.Broadcast(notifyJoined, addIds...)
 	}, members); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.AddMemberResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.AddMemberResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func onRemoveMember(u *User, msg *Message) {
-	req := msg.GetData().(*pb.RemoveMemberReq)
+	req := msg.GetData().(*protocol.RemoveMemberReq)
 	log.Debugf("user(%s) onRemoveMember %v", u.ID, req)
 
 	if len(req.GetRemoveIds()) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_RequestArgumentErr})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_RequestArgumentErr.Enum()})
 		return
 	}
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	if m, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	} else if m.Role != 1 {
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_UserNotHasPermission})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_UserNotHasPermission.Enum()})
 		return
 	}
 
@@ -258,56 +259,56 @@ func onRemoveMember(u *User, msg *Message) {
 	}
 
 	if len(members) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_OK})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_OK.Enum()})
 		return
 	}
 
 	if err := WrapFunc(dbDelGroupMember)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 
 		g.RemoveMember(members)
 
 		group := g.Pack()
-		notifyKicked := &pb.NotifyKicked{
+		notifyKicked := &protocol.NotifyKicked{
 			Group:    group,
-			KickedBy: u.ID,
+			KickedBy: proto.String(u.ID),
 		}
 		for _, m := range members {
 			NotifyUser(m.UserID, notifyKicked)
 		}
 
 		// 通知给群里其他人
-		notifyMemberLeft := &pb.NotifyMemberLeft{
+		notifyMemberLeft := &protocol.NotifyMemberLeft{
 			Group:    group,
 			LeftIds:  rmIds,
-			KickedBy: u.ID,
+			KickedBy: proto.String(u.ID),
 		}
 		g.Broadcast(notifyMemberLeft)
 
 	}, members); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.RemoveMemberResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.RemoveMemberResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 
 }
 
 func onJoin(u *User, msg *Message) {
-	req := msg.GetData().(*pb.JoinReq)
+	req := msg.GetData().(*protocol.JoinReq)
 	log.Debugf("user(%s) onJoin %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.JoinResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	group := g.Pack()
 	if _, isMember := g.Members[u.ID]; isMember {
-		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_OK, Group: group})
+		u.SendToClient(msg.GetSeq(), &protocol.JoinResp{Code: protocol.ErrCode_OK.Enum(), Group: group})
 		return
 	}
 
@@ -323,39 +324,39 @@ func onJoin(u *User, msg *Message) {
 	if err := WrapFunc(dbSetNxGroupMember)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.JoinResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 		g.AddMember(member)
 
 		// 通知给群里其他人
-		notifyJoined := &pb.NotifyMemberJoined{
+		notifyJoined := &protocol.NotifyMemberJoined{
 			Group:   group,
 			JoinIds: []string{u.ID},
-			InitBy:  u.ID,
+			InitBy:  proto.String(u.ID),
 		}
 		g.Broadcast(notifyJoined, u.ID)
 
 	}, member); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.JoinResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.JoinResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 
 }
 
 func onQuit(u *User, msg *Message) {
-	req := msg.GetData().(*pb.QuitReq)
+	req := msg.GetData().(*protocol.QuitReq)
 	log.Debugf("user(%s) onQuit %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.QuitResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	group := g.Pack()
 	if _, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_OK, Group: group})
+		u.SendToClient(msg.GetSeq(), &protocol.QuitResp{Code: protocol.ErrCode_OK.Enum(), Group: group})
 		return
 	}
 
@@ -363,41 +364,41 @@ func onQuit(u *User, msg *Message) {
 	if err := WrapFunc(dbDelGroupMember)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.QuitResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 		g.RemoveMember(member)
 
 		// 通知给群里其他人
-		notifyMemberLeft := &pb.NotifyMemberLeft{
+		notifyMemberLeft := &protocol.NotifyMemberLeft{
 			Group:    group,
 			LeftIds:  []string{u.ID},
-			KickedBy: u.ID,
+			KickedBy: proto.String(u.ID),
 		}
 		g.Broadcast(notifyMemberLeft)
 
 	}, member); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.QuitResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.QuitResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func onGetGroupMembers(u *User, msg *Message) {
-	req := msg.GetData().(*pb.GetGroupMembersReq)
+	req := msg.GetData().(*protocol.GetGroupMembersReq)
 	log.Debugf("user(%s) onGetGroupMembers %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.GetGroupMembersResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	if _, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.GetGroupMembersResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.GetGroupMembersResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	}
 
-	resp := &pb.GetGroupMembersResp{Members: make([]*pb.Member, 0, len(g.Members))}
+	resp := &protocol.GetGroupMembersResp{Members: make([]*protocol.Member, 0, len(g.Members))}
 	for _, m := range g.Members {
 		resp.Members = append(resp.Members, m.Pack())
 	}
@@ -405,33 +406,33 @@ func onGetGroupMembers(u *User, msg *Message) {
 }
 
 func onSendMessage(u *User, msg *Message) {
-	req := msg.GetData().(*pb.SendMessageReq)
+	req := msg.GetData().(*protocol.SendMessageReq)
 	log.Debugf("user(%s) onSendMessage %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.SendMessageResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	member, isMember := g.Members[u.ID]
 	if !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.SendMessageResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	}
 
 	g.LastMessageID += 1
-	m := &pb.MessageInfo{
+	m := &protocol.MessageInfo{
 		Msg:      req.GetMsg(),
-		UserID:   u.ID,
-		CreateAt: time.Now().Unix(),
-		MsgID:    g.LastMessageID,
+		UserID:   proto.String(u.ID),
+		CreateAt: proto.Int64(time.Now().Unix()),
+		MsgID:    proto.Int64(g.LastMessageID),
 	}
 
 	if err := WrapFunc(messageDeliver.pushMessage)(func(err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.SendMessageResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 
@@ -444,31 +445,31 @@ func onSendMessage(u *User, msg *Message) {
 		})
 
 		group := g.Pack()
-		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_OK, Group: group})
+		u.SendToClient(msg.GetSeq(), &protocol.SendMessageResp{Code: protocol.ErrCode_OK.Enum(), Group: group})
 
-		notifyMessage := &pb.NotifyMessage{
+		notifyMessage := &protocol.NotifyMessage{
 			Group:    group,
-			MsgInfos: []*pb.MessageInfo{m},
+			MsgInfos: []*protocol.MessageInfo{m},
 		}
 		g.Broadcast(notifyMessage)
 	}, g.ID, m); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.SendMessageResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.SendMessageResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func onSyncMessage(u *User, msg *Message) {
-	req := msg.GetData().(*pb.SyncMessageReq)
+	req := msg.GetData().(*protocol.SyncMessageReq)
 	log.Debugf("user(%s) onSyncMessage %v", u.ID, req)
 
 	g := GetGroup(req.GetGroupID())
 	if g == nil {
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_GroupNotExist})
+		u.SendToClient(msg.GetSeq(), &protocol.SyncMessageResp{Code: protocol.ErrCode_GroupNotExist.Enum()})
 		return
 	}
 
 	if _, isMember := g.Members[u.ID]; !isMember {
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_UserNotInGroup})
+		u.SendToClient(msg.GetSeq(), &protocol.SyncMessageResp{Code: protocol.ErrCode_UserNotInGroup.Enum()})
 		return
 	}
 	limit := req.GetLimit()
@@ -490,7 +491,7 @@ func onSyncMessage(u *User, msg *Message) {
 	}
 
 	if len(ids) == 0 {
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Group: g.Pack()})
+		u.SendToClient(msg.GetSeq(), &protocol.SyncMessageResp{Group: g.Pack()})
 		return
 	}
 
@@ -503,32 +504,32 @@ func onSyncMessage(u *User, msg *Message) {
 		ids = newIds
 	}
 
-	if err := WrapFunc(messageDeliver.loadMessage)(func(infos []*pb.MessageInfo, err error) {
+	if err := WrapFunc(messageDeliver.loadMessage)(func(infos []*protocol.MessageInfo, err error) {
 		if err != nil {
 			log.Error(err)
-			u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Error})
+			u.SendToClient(msg.GetSeq(), &protocol.SyncMessageResp{Code: protocol.ErrCode_Error.Enum()})
 			return
 		}
 
-		resp := &pb.SyncMessageResp{Group: g.Pack(), MsgInfos: infos}
+		resp := &protocol.SyncMessageResp{Group: g.Pack(), MsgInfos: infos}
 		u.SendToClient(msg.GetSeq(), resp)
 	}, g.ID, ids); err != nil {
 		log.Error(err)
-		u.SendToClient(msg.GetSeq(), &pb.SyncMessageResp{Code: pb.ErrCode_Busy})
+		u.SendToClient(msg.GetSeq(), &protocol.SyncMessageResp{Code: protocol.ErrCode_Busy.Enum()})
 	}
 }
 
 func init() {
-	registerHandler(uint16(pb.CmdType_CmdCreateGroupReq), onCreateGroup)
-	registerHandler(uint16(pb.CmdType_CmdGetGroupListReq), onGetGroupList)
-	registerHandler(uint16(pb.CmdType_CmdDissolveGroupReq), onDissolveGroup)
+	registerHandler(uint16(protocol.CmdType_CmdCreateGroupReq), onCreateGroup)
+	registerHandler(uint16(protocol.CmdType_CmdGetGroupListReq), onGetGroupList)
+	registerHandler(uint16(protocol.CmdType_CmdDissolveGroupReq), onDissolveGroup)
 
-	registerHandler(uint16(pb.CmdType_CmdAddMemberReq), onAddMember)
-	registerHandler(uint16(pb.CmdType_CmdRemoveMemberReq), onRemoveMember)
-	registerHandler(uint16(pb.CmdType_CmdJoinReq), onJoin)
-	registerHandler(uint16(pb.CmdType_CmdQuitReq), onQuit)
-	registerHandler(uint16(pb.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
+	registerHandler(uint16(protocol.CmdType_CmdAddMemberReq), onAddMember)
+	registerHandler(uint16(protocol.CmdType_CmdRemoveMemberReq), onRemoveMember)
+	registerHandler(uint16(protocol.CmdType_CmdJoinReq), onJoin)
+	registerHandler(uint16(protocol.CmdType_CmdQuitReq), onQuit)
+	registerHandler(uint16(protocol.CmdType_CmdGetGroupMembersReq), onGetGroupMembers)
 
-	registerHandler(uint16(pb.CmdType_CmdSendMessageReq), onSendMessage)
-	registerHandler(uint16(pb.CmdType_CmdSyncMessageReq), onSyncMessage)
+	registerHandler(uint16(protocol.CmdType_CmdSendMessageReq), onSendMessage)
+	registerHandler(uint16(protocol.CmdType_CmdSyncMessageReq), onSyncMessage)
 }

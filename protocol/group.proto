@@ -1,7 +1,7 @@
-syntax = "proto3";
-option go_package = "pb";
+syntax = "proto2";
+option go_package = "protocol";
 
-import "errcode.proto";
+import "protocol/errcode.proto";
 
 enum GroupType{
     Normal    = 0; // 普通会话类型 单聊、群聊
@@ -10,172 +10,172 @@ enum GroupType{
 }
 
 message Group{
-    GroupType type = 1;
-    int64 ID   = 2;
-    map<string,string> extra = 3; // 附加属性
-    int64 lastMessageID = 4;      // 最后一条消息的ID
-    int64  lastMessageAt = 5;     // 最后一条消息的时间
+    optional GroupType type = 1;
+    optional int64 ID   = 2;
+    repeated Extra extras = 3;// 附加属性
+    optional int64 lastMessageID = 4;      // 最后一条消息的ID
+    optional int64  lastMessageAt = 5;     // 最后一条消息的时间
 }
 
 // 创建对话
 message CreateGroupReq{
     repeated string members  = 1; // 必要参数，包含对话的初始成员列表，请注意当前用户作为对话的创建者，是默认包含在成员里面的，所以 members 数组中可以不包含当前用户。
-    map<string,string> extra = 2; // 附加属性
+    repeated Extra extras = 2;// 附加属性
 }
 
 message CreateGroupResp{
-    ErrCode code = 1;
-    Group group   = 2;
+    optional ErrCode code = 1;
+    optional Group group   = 2;
 }
 
 message NotifyInvited{
-    Group group   = 1;
-    string       initBy = 2; // 操作者
+    optional Group group   = 1;
+    optional string       initBy = 2; // 操作者
 }
 
 // 用户发送消息
 message Message{
-    string text = 1; // 文本消息
+    optional string text = 1; // 文本消息
 }
 
 message MessageInfo{
-    Message msg      = 1;
-    int64   msgID    = 2;
-    int64   createAt = 3; // 创建时间戳秒
-    bool    recalled = 4; // 撤回
-    string  userID   = 5;
+    optional Message msg      = 1;
+    optional int64   msgID    = 2;
+    optional int64   createAt = 3; // 创建时间戳秒
+    optional bool    recalled = 4; // 撤回
+    optional string  userID   = 5;
 }
 
 message SendMessageReq{
-    int64  groupID = 1;
-    Message msg    = 2;
+    optional int64  groupID = 1;
+    optional Message msg    = 2;
 }
 
 message SendMessageResp{
-    ErrCode code = 1;
-    Group group   = 2;
+    optional ErrCode code = 1;
+    optional Group group   = 2;
 }
 
 message NotifyMessage{
-    Group group     = 1;
+    optional Group group     = 1;
     repeated MessageInfo  msgInfos  = 2;
 }
 
 message AddMemberReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
     repeated string addIds = 2;
 }
 
 message AddMemberResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
     repeated string existIds = 2;
 }
 
 message NotifyMemberJoined{
-    Group    group     = 1;
+    optional Group    group     = 1;
     repeated string joinIds  = 2; // 加入的用户
-    string          initBy   = 3; // 操作者
+    optional string          initBy   = 3; // 操作者
 }
 
 message RemoveMemberReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
     repeated string removeIds = 2;
 }
 
 message RemoveMemberResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
 }
 
 message NotifyMemberLeft{
-    Group    group     = 1;
+    optional Group    group     = 1;
     repeated string leftIds  = 2; // 离开的用户
-    string          kickedBy = 3; // 操作者
+    optional string          kickedBy = 3; // 操作者
 }
 
 message NotifyKicked{
-    Group group     = 1;
-    string       kickedBy = 2; // 操作者
+    optional Group group     = 1;
+    optional string       kickedBy = 2; // 操作者
 }
 
 message JoinReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
 }
 message JoinResp{
-    ErrCode code = 1;
-    Group group   = 2;
+    optional ErrCode code = 1;
+    optional Group group   = 2;
 }
 
 // 主动
 message QuitReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
 }
 message QuitResp{
-    ErrCode code = 1;
-    Group group   = 2;
+    optional ErrCode code = 1;
+    optional Group group   = 2;
 }
 
 // 获取会话的成员列表，对于像「聊天室」这样的特殊对话，并不存在「成员列表」属性
 message Member{
-    bool      online  = 1;
-    string    userID  = 2;
-    map<string,string> extra = 3; // 附加属性
-    string    nickname = 4; // 群内昵称
-    bool      mute     = 5; // 禁言
-    int32     role     = 6; // 群内角色， 0:成员 1:管理员
-    int64     createAt = 7; // 入群时间
-    int64     updateAt = 8; // 上一次活跃时间
+    optional bool      online  = 1;
+    optional string    userID  = 2;
+    repeated Extra     extras  = 3;// 附加属性
+    optional string    nickname = 4; // 群内昵称
+    optional bool      mute     = 5; // 禁言
+    optional int32     role     = 6; // 群内角色， 0:成员 1:管理员
+    optional int64     createAt = 7; // 入群时间
+    optional int64     updateAt = 8; // 上一次活跃时间
 }
 
 message GetGroupMembersReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
 }
 message GetGroupMembersResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
     repeated Member members = 2;
 }
 
 // 解散会话
 message DissolveGroupReq{
-    int64 groupID = 1;
+    optional int64 groupID = 1;
 }
 message DissolveGroupResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
 }
 
 message NotifyDissolveGroup{
-    int64 groupID = 1;
-    string initBy = 2;
+    optional int64 groupID = 1;
+    optional string initBy = 2;
 }
 
 // 拉取列表
 message GetGroupListReq{}
 message GetGroupListResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
     repeated Group groups = 2;
 }
 
 // 会话消息同步
 message SyncMessageReq{
-    int64 groupID   = 1;
-    int64 startID  = 2; // 开始请求的消息ID
-    int32 limit    = 3; // 查询的消息数量，限制50条
-    bool  oldToNew = 4; // 从旧到新、从新到旧
+    optional int64 groupID   = 1;
+    optional int64 startID  = 2; // 开始请求的消息ID
+    optional int32 limit    = 3; // 查询的消息数量，限制50条
+    optional bool  oldToNew = 4; // 从旧到新、从新到旧
 }
 message SyncMessageResp{
-    ErrCode code = 1;
-    Group group   = 2;
+    optional ErrCode code = 1;
+    optional Group group   = 2;
     repeated MessageInfo  msgInfos = 3;
 }
 
 message RecallMessageReq{
-    int64 groupID = 1;
-    int64 msgID  = 2;
+    optional int64 groupID = 1;
+    optional int64 msgID  = 2;
 }
 message RecallMessageResp{
-    ErrCode code = 1;
+    optional ErrCode code = 1;
 }
 
 message NotifyRecallMessage{
-    Group group  = 1;
-    MessageInfo  msg   = 2;
+    optional Group group  = 1;
+    optional MessageInfo  msg   = 2;
 }

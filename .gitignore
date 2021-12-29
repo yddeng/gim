@@ -1,0 +1,10 @@
+*.exe
+*.out
+*.toml
+*.cfg
+
+*.log
+.idea
+.DS_Store
+
+*.sh
