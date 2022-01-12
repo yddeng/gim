@@ -207,5 +207,6 @@ func init() {
 	register(&protocol.DeleteFriendReq{}, uint16(protocol.CmdType_CmdDeleteFriendReq))
 	register(&protocol.DeleteFriendResp{}, uint16(protocol.CmdType_CmdDeleteFriendResp))
 	register(&protocol.NotifyDeleteFriend{}, uint16(protocol.CmdType_CmdNotifyDeleteFriend))
+	register(&protocol.NotifyUserOnline{}, uint16(protocol.CmdType_CmdNotifyUserOnline))
 
 }

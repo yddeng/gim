@@ -136,6 +136,9 @@ func main() {
 	registerHandler(protocol.CmdType_CmdGetUserInfoResp, func(session dnet.Session, msg *im.Message) {
 		log.Debugf("GetUserInfoResp %v", msg.GetData().(*protocol.GetUserInfoResp))
 	})
+	registerHandler(protocol.CmdType_CmdNotifyUserOnline, func(session dnet.Session, msg *im.Message) {
+		log.Debugf("NotifyUserOnline %v", msg.GetData().(*protocol.NotifyUserOnline))
+	})
 
 	go func() {
 		for {

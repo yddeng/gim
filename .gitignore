@@ -7,5 +7,6 @@
 .idea
 .DS_Store
 
-*.sh
+move.sh
+upload.sh
 workspace/

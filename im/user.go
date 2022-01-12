@@ -70,11 +70,25 @@ func (this *User) Pack() *protocol.User {
 	return &protocol.User{
 		ID:     proto.String(this.ID),
 		Extras: this.Extra,
+		Online: proto.Bool(this.online()),
 	}
 }
 
 func (this *User) online() bool {
 	return this.sess != nil
+}
+
+func (this *User) notifyOnline() {
+	friends := GetFriends(this.ID)
+	notify := &protocol.NotifyUserOnline{
+		ID:     proto.String(this.ID),
+		Online: proto.Bool(this.online()),
+	}
+	for friendID, f := range friends {
+		if f.Status == FriendStatusAgree {
+			NotifyUser(friendID, notify)
+		}
+	}
 }
 
 //func(this *User)SendMessage (msg *Message)  {
@@ -135,6 +149,7 @@ func onUserLogin(sess dnet.Session, msg *Message) {
 	sess.SetContext(u)
 
 	u.SendToClient(msg.GetSeq(), &protocol.UserLoginResp{Code: protocol.ErrCode_OK.Enum()})
+	u.notifyOnline()
 }
 
 func onGetUserInfo(u *User, msg *Message) {

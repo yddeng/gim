@@ -19,6 +19,12 @@ message Heartbeat{
 message User{
     required string ID = 1;
     repeated Extra extras = 2;// 附加属性
+    optional bool  online = 3;
+}
+
+message NotifyUserOnline{
+    required string ID = 1;
+    optional bool   online = 2;
 }
 
 message GetUserInfoReq{

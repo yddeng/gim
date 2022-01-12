@@ -80,7 +80,7 @@ func onCreateGroup(u *User, msg *Message) {
 
 func onGetGroupList(u *User, msg *Message) {
 	//req := msg.GetData().(*protocol.GetGroupListReq)
-	//log.Debugf("user(%s) onGetGroupList %v", u.ID, req)
+	log.Debugf("user(%s) onGetGroupList", u.ID)
 	if err := WrapFunc(dbGetUserGroups)(func(groups map[int64]*Member, err error) {
 		if err != nil {
 			log.Error(err)

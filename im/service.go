@@ -62,6 +62,7 @@ func createSession(conn net.Conn) dnet.Session {
 					}
 					u.sess.SetContext(nil)
 					u.sess = nil
+					u.notifyOnline()
 				})
 			}
 		}))

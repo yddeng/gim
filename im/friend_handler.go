@@ -166,7 +166,7 @@ func onDeleteFriend(u *User, msg *Message) {
 
 func onGetFriends(u *User, msg *Message) {
 	//req := msg.GetData().(*protocol.GetFriendsReq)
-	//log.Debugf("user(%s) onGetFriends %v", u.ID, req)
+	log.Debugf("user(%s) onGetFriends", u.ID)
 
 	friends := GetFriends(u.ID)
 	if len(friends) == 0 {

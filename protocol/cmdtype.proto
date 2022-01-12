@@ -55,5 +55,6 @@ enum CmdType {
     CmdDeleteFriendReq  = 409;
     CmdDeleteFriendResp  = 410;
     CmdNotifyDeleteFriend  = 411;
+    CmdNotifyUserOnline    = 412;
 }
 
