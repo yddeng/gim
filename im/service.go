@@ -37,7 +37,7 @@ func StartWSGateway(address string) error {
 
 func createSession(conn net.Conn) dnet.Session {
 	return dnet.NewTCPSession(conn,
-		//dnet.WithTimeout(time.Second*time.Duration(config.HeartbeatTimeout), 0),
+		dnet.WithTimeout(time.Second*time.Duration(config.HeartbeatTimeout), 0),
 		dnet.WithCodec(Codec{}),
 		//dnet.WithErrorCallback(func(session dnet.Session, err error) {
 		//	fmt.Println("onError", err)
@@ -52,9 +52,9 @@ func createSession(conn net.Conn) dnet.Session {
 		dnet.WithCloseCallback(func(session dnet.Session, reason error) {
 			atomic.AddInt32(&crtConnCount, -1)
 			log.Debug(session.RemoteAddr().String(), reason)
-			ctx := session.Context()
-			if ctx != nil {
-				_ = taskQueue.Push(func() {
+			_ = taskQueue.Push(func() {
+				ctx := session.Context()
+				if ctx != nil {
 					u := ctx.(*User)
 					log.Infof("onClose user(%s) %s. ", u.ID, reason)
 					if u.sess != session {
@@ -63,8 +63,9 @@ func createSession(conn net.Conn) dnet.Session {
 					u.sess.SetContext(nil)
 					u.sess = nil
 					u.notifyOnline()
-				})
-			}
+
+				}
+			})
 		}))
 }
 
